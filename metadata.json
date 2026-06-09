@@ -1,0 +1,6 @@
+{
+  "name": "FPC Accounting",
+  "description": "Comprehensive corporate ERP for Farmer Producer Companies (FPC) to manage Inventory, Assets, Banking, Members, and Double-Entry Accounting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
