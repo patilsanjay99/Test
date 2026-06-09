@@ -169,8 +169,8 @@ export function SalesInvoiceForm() {
           </div>
         </div>
 
-        <div className="p-0 overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+        <div className="p-0 border-b border-gray-100 pb-32">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
                 <th className="font-medium p-3">Item Details</th>

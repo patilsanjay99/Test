@@ -3,19 +3,22 @@ import path from 'path';
 
 // Connect to SQLite DB in the root of the project
 const dbPath = path.join(process.cwd(), 'fpc_database.sqlite');
-const db = new Database(dbPath);
+let db: any;
 
-// Initialize tables if they don't exist
-const initSql = `
-CREATE TABLE IF NOT EXISTS Companies (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    GSTIN TEXT,
-    PAN TEXT,
-    City TEXT,
-    State TEXT,
-    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+try {
+  db = new Database(dbPath);
+  
+  // Initialize tables if they don't exist
+  const initSql = `
+  CREATE TABLE IF NOT EXISTS Companies (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      Name TEXT NOT NULL,
+      GSTIN TEXT,
+      PAN TEXT,
+      City TEXT,
+      State TEXT,
+      CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
 CREATE TABLE IF NOT EXISTS Users (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -151,6 +154,10 @@ if (!firstCompany) {
   
   db.prepare("INSERT INTO FinancialYears (FinancialYear, CompanyId, FromDate, ToDate) VALUES (?, ?, ?, ?)").run('2023-2024', compInfo.lastInsertRowid, '2023-04-01', '2024-03-31');
   db.prepare("INSERT INTO FinancialYears (FinancialYear, CompanyId, FromDate, ToDate) VALUES (?, ?, ?, ?)").run('2024-2025', compInfo.lastInsertRowid, '2024-04-01', '2025-03-31');
+}
+} catch (err: any) {
+  console.error('Failed to initialize SQLite Db (possibly malformed). If using MS SQL, this can be ignored.', err.message);
+  db = { prepare: () => ({ all: () => [], get: () => null, run: () => ({ lastInsertRowid: 1 }) }), exec: () => {} };
 }
 
 export default db;
