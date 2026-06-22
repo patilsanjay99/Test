@@ -5,14 +5,26 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function Header() {
-  const { activeCompany, companies, setActiveCompany, activeFinancialYear, setActiveFinancialYear, financialYears } = useAppContext();
+  const { 
+    activeCompany, 
+    companies, 
+    setActiveCompany, 
+    activeFinancialYear, 
+    setActiveFinancialYear, 
+    financialYears,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen
+  } = useAppContext();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shrink-0">
       <div className="flex items-center gap-4">
-        <button className="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-600">
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-600"
+        >
           <Menu className="w-5 h-5" />
         </button>
         

@@ -49,7 +49,7 @@ export function Sidebar() {
   const location = useLocation();
   const { t } = useLanguage();
   const { hasPermission, user } = useAuth();
-  const { activeCompany } = useAppContext();
+  const { activeCompany, isMobileMenuOpen, setIsMobileMenuOpen } = useAppContext();
 
   const menuItems: MenuItem[] = [
     { title: t('sidebar.settings'), path: '/settings', icon: Settings },
@@ -169,101 +169,117 @@ export function Sidebar() {
   };
   
   return (
-    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full shrink-0">
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950 font-bold text-xl tracking-tight text-white gap-2">
-        {activeCompany?.LogoUrl ? (
-          <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
-             <img src={activeCompany.LogoUrl} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
-        )}
-        <span className="truncate">{t('app.title')}</span>
-      </div>
+    <>
+      {/* Backdrop for mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/60 z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
       
-      <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
-        <nav className="space-y-1 px-3">
-          {menuItems
-            .map(item => ({
-              ...item,
-              submenu: item.submenu?.filter(sub => hasPermission(sub.path))
-            }))
-            .filter(item => hasParentPermission(item.path))
-            .map((item) => (
-            <div key={item.title}>
-              {item.submenu && item.submenu.length > 0 ? (
-                <div>
-                  <button
-                    onClick={() => toggleExpand(item.title)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                      isActive(item.path) || expandedItems[item.title] 
-                        ? "bg-slate-800 text-white" 
+      <div className={cn(
+        "bg-slate-900 text-slate-300 flex flex-col h-full shrink-0 z-50 transition-transform duration-300 ease-in-out print:hidden",
+        "fixed inset-y-0 left-0 w-64 transform lg:static lg:translate-x-0 lg:w-64",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:-translate-x-0"
+      )}>
+        <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950 font-bold text-xl tracking-tight text-white gap-2">
+          {activeCompany?.LogoUrl ? (
+            <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
+               <img src={activeCompany.LogoUrl} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+          )}
+          <span className="truncate">{t('app.title')}</span>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
+          <nav className="space-y-1 px-3">
+            {menuItems
+              .map(item => ({
+                ...item,
+                submenu: item.submenu?.filter(sub => hasPermission(sub.path))
+              }))
+              .filter(item => hasParentPermission(item.path))
+              .map((item) => (
+              <div key={item.title}>
+                {item.submenu && item.submenu.length > 0 ? (
+                  <div>
+                    <button
+                      onClick={() => toggleExpand(item.title)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        isActive(item.path) || expandedItems[item.title] 
+                          ? "bg-slate-800 text-white" 
+                          : "hover:bg-slate-800 hover:text-white"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-5 h-5 shrink-0" />
+                        {item.title}
+                      </div>
+                      {expandedItems[item.title] ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
+                    
+                    {expandedItems[item.title] && (
+                      <div className="mt-1 space-y-1 pl-10 pr-3">
+                        {item.submenu.map((sub) => (
+                          <NavLink
+                            key={sub.path}
+                            to={sub.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={({ isActive }) => cn(
+                              "block px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                              isActive 
+                                ? "bg-blue-600 text-white" 
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            )}
+                          >
+                            {sub.title}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <NavLink
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                      isActive 
+                        ? "bg-blue-600 text-white" 
                         : "hover:bg-slate-800 hover:text-white"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-5 h-5 shrink-0" />
-                      {item.title}
-                    </div>
-                    {expandedItems[item.title] ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                  </button>
-                  
-                  {expandedItems[item.title] && (
-                    <div className="mt-1 space-y-1 pl-10 pr-3">
-                      {item.submenu.map((sub) => (
-                        <NavLink
-                          key={sub.path}
-                          to={sub.path}
-                          className={({ isActive }) => cn(
-                            "block px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive 
-                              ? "bg-blue-600 text-white" 
-                              : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                          )}
-                        >
-                          {sub.title}
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) => cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                    isActive 
-                      ? "bg-blue-600 text-white" 
-                      : "hover:bg-slate-800 hover:text-white"
-                  )}
-                >
-                  <item.icon className="w-5 h-5 shrink-0" />
-                  {item.title}
-                </NavLink>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
-      
-      <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 font-medium text-sm px-3 py-2">
-           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
-             {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
-           </div>
-           <div className="truncate">
-             <div className="text-white truncate">{user?.Name || user?.name}</div>
-             <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
-           </div>
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    {item.title}
+                  </NavLink>
+                )}
+              </div>
+            ))}
+          </nav>
+        </div>
+        
+        <div className="p-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 font-medium text-sm px-3 py-2">
+             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
+               {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
+             </div>
+             <div className="truncate">
+               <div className="text-white truncate">{user?.Name || user?.name}</div>
+               <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
+             </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

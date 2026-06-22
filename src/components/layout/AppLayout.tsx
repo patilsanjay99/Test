@@ -6,9 +6,7 @@ import { Header } from './Header';
 export function AppLayout() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans print:h-auto print:overflow-visible print:bg-white">
-      <div className="print:hidden">
-        <Sidebar />
-      </div>
+      <Sidebar />
       <div className="flex-1 flex flex-col h-full overflow-hidden print:overflow-visible">
         <div className="print:hidden">
           <Header />

@@ -15,6 +15,8 @@ interface AppContextType {
   financialYears: FinancialYear[];
   refreshFinancialYears: () => void;
   refreshCompanies: () => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 const mockFinancialYears: FinancialYear[] = [
@@ -35,6 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [financialYears, setFinancialYears] = useState<FinancialYear[]>([]);
   const [activeFinancialYear, setActiveFinancialYear] = useState<FinancialYear | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fetchCompanies = () => {
     fetch(`/api/data/Companies?_t=${Date.now()}`)
@@ -101,7 +104,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeCompany, setActiveCompany, companies,
       activeFinancialYear, setActiveFinancialYear, financialYears,
       refreshFinancialYears: fetchFinancialYears,
-      refreshCompanies: fetchCompanies
+      refreshCompanies: fetchCompanies,
+      isMobileMenuOpen,
+      setIsMobileMenuOpen
     }}>
       {children}
     </AppContext.Provider>
