@@ -10,6 +10,12 @@ export interface Company {
   name: string;
   gstNumber: string;
   panNumber: string;
+  address?: string;
+  defaultQuotationTerms?: string;
+  defaultSalesOrderTerms?: string;
+  defaultSalesInvoiceTerms?: string;
+  LogoUrl?: string;
+  StateCode?: string;
 }
 
 // Define other core types here as the app expands

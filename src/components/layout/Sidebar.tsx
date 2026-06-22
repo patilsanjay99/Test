@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAppContext } from '../../context/AppContext';
 import { 
   Building2, 
   Users, 
@@ -14,11 +15,16 @@ import {
   ChevronDown,
   ChevronRight,
   Briefcase,
-  Calendar
+  Calendar,
+  MapPin,
+  Upload,
+  Shield,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MenuItem } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
 function Database(props: any) {
   return (
@@ -42,8 +48,11 @@ export function Sidebar() {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const { t } = useLanguage();
+  const { hasPermission, user } = useAuth();
+  const { activeCompany } = useAppContext();
 
   const menuItems: MenuItem[] = [
+    { title: t('sidebar.settings'), path: '/settings', icon: Settings },
     { title: t('sidebar.dashboard'), path: '/', icon: LayoutDashboard },
     { 
       title: t('sidebar.masterData'), 
@@ -53,8 +62,16 @@ export function Sidebar() {
         { title: t('sidebar.companyDetails'), path: '/master/company', icon: Building2 },
         { title: t('sidebar.financialYears'), path: '/master/financial-years', icon: Calendar },
         { title: t('sidebar.customerDetails'), path: '/master/customers', icon: Users },
+        { title: t('sidebar.vendorDetails'), path: '/master/vendors', icon: Users },
+        { title: t('sidebar.bankDetails'), path: '/master/banks', icon: Landmark },
+        { title: 'A/c Types', path: '/master/bank-account-types', icon: Landmark },
         { title: t('sidebar.usersRoles'), path: '/master/users', icon: Users },
+        { title: 'System Roles', path: '/master/system-roles', icon: Shield },
+        { title: t('sidebar.locations'), path: '/master/locations', icon: MapPin },
         { title: t('sidebar.itemsProducts'), path: '/master/items', icon: Package },
+        { title: t('sidebar.accountGroups'), path: '/master/groups', icon: Landmark },
+        { title: t('sidebar.chartOfAccounts'), path: '/master/accounts', icon: Landmark },
+        { title: t('sidebar.bulkUpload'), path: '/master/bulk-upload', icon: Upload },
       ]
     },
     { 
@@ -63,8 +80,19 @@ export function Sidebar() {
       icon: Users,
       submenu: [
         { title: t('sidebar.fpcMembers'), path: '/fpc/members', icon: Users },
+        { title: t('sidebar.memberRegister'), path: '/fpc/register', icon: Users },
         { title: t('sidebar.shareManagement'), path: '/fpc/shares', icon: FileText },
         { title: t('sidebar.loanManagement'), path: '/fpc/loans', icon: Wallet },
+      ]
+    },
+    { 
+      title: t('sidebar.purchase'), 
+      path: '/purchase', 
+      icon: Receipt,
+      submenu: [
+        { title: t('sidebar.purchaseOrders'), path: '/purchase/orders', icon: ShoppingCart },
+        { title: t('sidebar.purchaseInvoices'), path: '/purchase/invoices', icon: Receipt },
+        { title: t('sidebar.purchaseReturns'), path: '/purchase/returns', icon: FileText }
       ]
     },
     { 
@@ -79,20 +107,11 @@ export function Sidebar() {
       ]
     },
     { 
-      title: t('sidebar.purchase'), 
-      path: '/purchase', 
-      icon: Receipt,
-      submenu: [
-        { title: t('sidebar.purchaseOrders'), path: '/purchase/orders', icon: ShoppingCart },
-        { title: t('sidebar.purchaseInvoices'), path: '/purchase/invoices', icon: Receipt },
-        { title: t('sidebar.purchaseReturns'), path: '/purchase/returns', icon: FileText }
-      ]
-    },
-    { 
       title: t('sidebar.inventory'), 
       path: '/inventory', 
       icon: Package,
       submenu: [
+        { title: t('sidebar.stockSummary'), path: '/inventory/summary', icon: Package },
         { title: t('sidebar.stockLedger'), path: '/inventory/ledger', icon: Package },
         { title: t('sidebar.stockAdjustments'), path: '/inventory/adjustments', icon: Package }
       ]
@@ -110,12 +129,24 @@ export function Sidebar() {
       path: '/accounting', 
       icon: Landmark,
       submenu: [
-        { title: t('sidebar.chartOfAccounts'), path: '/accounting/accounts', icon: Landmark },
-        { title: t('sidebar.journalEntries'), path: '/accounting/journal', icon: Landmark }
+        { title: t('sidebar.journalEntries'), path: '/accounting/journal', icon: Landmark },
+        { title: t('sidebar.cashPayments'), path: '/accounting/payments', icon: Wallet },
+        { title: t('sidebar.bankPayments'), path: '/accounting/bank-payments', icon: Wallet },
+        { title: t('sidebar.cashReceipts'), path: '/accounting/receipts', icon: Wallet },
+        { title: t('sidebar.bankReceipts'), path: '/accounting/bank-receipts', icon: Wallet }
+      ]
+    },
+    { 
+      title: 'E-Tracker', 
+      path: '/e-tracker', 
+      icon: ClipboardList,
+      submenu: [
+        { title: 'Dashboard', path: '/e-tracker', icon: LayoutDashboard },
+        { title: 'Issues & Tickets', path: '/e-tracker/issues', icon: Briefcase },
+        { title: 'Status Master', path: '/e-tracker/statuses', icon: Settings }
       ]
     },
     { title: t('sidebar.reports'), path: '/reports', icon: FileText },
-    { title: t('sidebar.settings'), path: '/settings', icon: Settings },
   ];
 
   const toggleExpand = (title: string) => {
@@ -127,20 +158,42 @@ export function Sidebar() {
     return location.pathname.startsWith(path);
   };
 
+  const hasParentPermission = (path: string) => {
+    if (user?.role === 'Super Admin' || user?.Role === 'Super Admin') return true;
+    // Allow access if any submenu item is accessible
+    const submenu = menuItems.find(item => item.path === path)?.submenu;
+    if (submenu) {
+        return submenu.some(sub => hasPermission(sub.path));
+    }
+    return hasPermission(path);
+  };
+  
   return (
     <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full shrink-0">
       <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950 font-bold text-xl tracking-tight text-white gap-2">
-        <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center">
-          <Building2 className="w-5 h-5 text-white" />
-        </div>
-        <span>{t('app.title')}</span>
+        {activeCompany?.LogoUrl ? (
+          <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
+             <img src={activeCompany.LogoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-white" />
+          </div>
+        )}
+        <span className="truncate">{t('app.title')}</span>
       </div>
       
       <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
         <nav className="space-y-1 px-3">
-          {menuItems.map((item) => (
+          {menuItems
+            .map(item => ({
+              ...item,
+              submenu: item.submenu?.filter(sub => hasPermission(sub.path))
+            }))
+            .filter(item => hasParentPermission(item.path))
+            .map((item) => (
             <div key={item.title}>
-              {item.submenu ? (
+              {item.submenu && item.submenu.length > 0 ? (
                 <div>
                   <button
                     onClick={() => toggleExpand(item.title)}
@@ -203,11 +256,11 @@ export function Sidebar() {
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 font-medium text-sm px-3 py-2">
            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
-             SA
+             {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
            </div>
            <div className="truncate">
-             <div className="text-white truncate">Super Admin</div>
-             <div className="text-xs text-slate-500 truncate">admin@fpc.com</div>
+             <div className="text-white truncate">{user?.Name || user?.name}</div>
+             <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
            </div>
         </div>
       </div>

@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
+import { CustomDatePicker } from '../../components/CustomDatePicker';
 
 export function FinancialYearForm() {
   const navigate = useNavigate();
-  const { activeCompany } = useAppContext();
+  const { activeCompany, refreshFinancialYears } = useAppContext();
   const [formData, setFormData] = useState({
     FinancialYear: '',
     FromDate: '',
@@ -37,11 +38,8 @@ export function FinancialYearForm() {
         throw new Error(errorData.error || 'Server error');
       }
       
-      // Need to force refresh AppContext if we wanted, but reload or moving routes is enough
-      // To properly refresh context, we would need a refresh function in context,
-      // but navigating usually re-fetches if we have it built in. 
-      // Temporary simple reload to ensure context picks up the new FY:
-      window.location.href = '/master/financial-years';
+      refreshFinancialYears();
+      navigate('/master/financial-years');
     } catch(err: any) {
       alert("Failed to save financial year: " + err.message);
     } finally {
@@ -57,58 +55,111 @@ export function FinancialYearForm() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col space-y-6 pb-12">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => navigate('/master/financial-years')}
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600"
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600 focus:outline-[#8faad8] focus:ring-2 focus:ring-blue-500"
+            title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add Financial Year</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight font-sans">Financial Year Master</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-          <div className="col-span-full space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Financial Year Label *</label>
-            <input required type="text" name="FinancialYear" placeholder="e.g. 2024-2025" value={formData.FinancialYear} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-            <p className="text-xs text-gray-500">Company formatting will be applied based on your active company.</p>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">From Date</label>
-            <input required type="date" name="FromDate" value={formData.FromDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">To Date</label>
-            <input required type="date" name="ToDate" value={formData.ToDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Status</label>
-            <select name="Status" value={formData.Status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
+      <form onSubmit={handleSave} className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md overflow-hidden">
+        {/* Green Title Header */}
+        <div className="bg-[#0b8a1c] text-white py-3 px-4 border-b border-blue-900 text-center font-bold text-xl tracking-wide uppercase">
+          CREATE FINANCIAL YEAR MASTER
         </div>
 
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+        {/* Form Master Grid Box */}
+        <div className="grid grid-cols-1">
+          
+          {/* Row 1: Financial Year Label */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+            <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+              Financial Year Label <span className="text-red-500 ml-1">*</span>
+            </div>
+            <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+              <input 
+                required 
+                type="text" 
+                name="FinancialYear" 
+                placeholder="e.g. 2024-2025" 
+                value={formData.FinancialYear} 
+                onChange={handleChange} 
+                className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]" 
+              />
+            </div>
+          </div>
+
+          {/* Row 2: From Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+            <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+              From Date (dd/mm/yyyy) <span className="text-red-500 ml-1">*</span>
+            </div>
+            <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+              <CustomDatePicker 
+                required 
+                value={formData.FromDate} 
+                onChange={(val) => setFormData(prev => ({ ...prev, FromDate: val }))} 
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: To Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+            <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+              To Date (dd/mm/yyyy) <span className="text-red-500 ml-1">*</span>
+            </div>
+            <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+              <CustomDatePicker 
+                required 
+                value={formData.ToDate} 
+                onChange={(val) => setFormData(prev => ({ ...prev, ToDate: val }))} 
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* Row 4: Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 min-h-[48px] items-stretch">
+            <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+              Status
+            </div>
+            <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+              <select 
+                name="Status" 
+                value={formData.Status} 
+                onChange={handleChange} 
+                className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Action buttons at footer */}
+        <div className="bg-[#f1f5f9] border-t-2 border-blue-900 p-4 flex justify-end gap-3">
           <button 
             type="button"
             onClick={() => navigate('/master/financial-years')}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100 text-gray-700 bg-white transition-colors"
+            className="px-4 py-2 border border-[#8faad8] rounded font-bold text-[#1e293b] hover:bg-[#cbd5e1] bg-white transition-colors text-sm"
           >
-            Cancel
+            CANCEL
           </button>
           <button 
             type="submit"
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
+            className="bg-[#0b8a1c] hover:bg-[#097016] text-white px-5 py-2 rounded font-bold border border-blue-900 flex items-center gap-2 transition-colors uppercase text-sm disabled:opacity-50 shadow-sm"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Financial Year'}

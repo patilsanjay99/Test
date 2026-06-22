@@ -2,8 +2,10 @@ import { exportToCSV } from '../../lib/utils';
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export function Company() {
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +13,7 @@ export function Company() {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch('/api/v1/data/Companies');
+      const res = await fetch('/api/data/Companies');
       const data = await res.json();
       setCompanies(Array.isArray(data) ? data : []);
     } catch(e) {
@@ -27,7 +29,7 @@ export function Company() {
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this company?')) {
-      await fetch(`/api/v1/data/Companies/${id}`, { method: 'DELETE' });
+      await fetch(`/api/data/Companies/${id}`, { method: 'DELETE' });
       fetchCompanies();
     }
   };
@@ -38,18 +40,18 @@ export function Company() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Company Management</h1>
           <p className="text-sm text-gray-500 mt-1">Manage multiple FPC entities within the system.</p>
         </div>
-        <button 
+        {hasPermission('/master/company', 'add') && ( <button 
           onClick={() => navigate('/master/company/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
           <Plus className="w-4 h-4" />
           Add Company
-        </button>
+        </button> )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
@@ -61,7 +63,7 @@ export function Company() {
               placeholder="Search companies..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-white"
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-[#f4fbf4]"
             />
           </div>
           <div className="flex gap-2">
@@ -92,18 +94,18 @@ export function Company() {
                   <td colSpan={5} className="p-4 text-center text-sm text-gray-500">No records found</td>
                 </tr>
               ) : filtered.map((c) => (
-                <tr key={c.Id} className="hover:bg-gray-50 transition-colors group">
+                <tr key={c.Id || c.id || c.ID} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4 text-sm font-medium text-gray-900">{c.Name}</td>
                   <td className="p-4 text-sm text-gray-600 font-mono">{c.GSTIN}</td>
                   <td className="p-4 text-sm text-gray-600 font-mono">{c.PAN}</td>
                   <td className="p-4 text-sm text-gray-600">{c.City}</td>
                   <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
+                    {hasPermission('/master/company', 'edit') && ( <button onClick={() => navigate(`/master/company/${c.Id || c.id || c.ID}`)} className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(c.Id)} className="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                    </button> )}
+                    {hasPermission('/master/company', 'delete') && ( <button onClick={() => handleDelete(c.Id || c.id || c.ID)} className="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button> )}
                   </td>
                 </tr>
               ))}

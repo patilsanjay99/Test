@@ -34,3 +34,14 @@ html, body, #root {
   height: 100%;
   margin: 0;
 }
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0mm !important;
+  }
+}
+
+.react-datepicker-popper {
+  z-index: 55 !important;
+}

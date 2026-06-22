@@ -1,6 +1,6 @@
 export const mr = {
   app: {
-    title: 'कृषी ERP',
+    title: 'FPC ERP',
     subtitle: 'FPC व्यवस्थापन प्रणाली',
   },
   sidebar: {
@@ -9,10 +9,16 @@ export const mr = {
     companyDetails: 'कंपनीची माहिती',
     financialYears: 'आर्थिक वर्षे',
     customerDetails: 'ग्राहक तपशील',
+    vendorDetails: 'विक्रेता तपशील (Vendors)',
+    bankDetails: 'बँक तपशील (Bank Details)',
     usersRoles: 'वापरकर्ते आणि भूमिका',
+    locations: 'स्थाने/माहिती (Locations)',
+    bulkUpload: 'एकत्रित अपलोड (Bulk Upload)',
     itemsProducts: 'वस्तू आणि उत्पादने',
+    accountGroups: 'खाते गट (Account Groups)',
     fpcManagement: 'FPC व्यवस्थापन',
     fpcMembers: 'FPC सदस्य',
+    memberRegister: 'सदस्य नोंदणी (Member Register)',
     shareManagement: 'शेअर व्यवस्थापन',
     loanManagement: 'कर्ज व्यवस्थापन',
     sales: 'विक्री',
@@ -25,13 +31,18 @@ export const mr = {
     purchaseInvoices: 'खरेदी पावत्या',
     purchaseReturns: 'खरेदी परतावा',
     inventory: 'इन्व्हेंटरी (Inventory)',
+    stockSummary: 'स्टॉक सारांश',
     stockLedger: 'स्टॉक लेजर',
     stockAdjustments: 'स्टॉक समायोजन',
     assets: 'मालमत्ता (Assets)',
     assetRegister: 'मालमत्ता नोंदणी',
     accounting: 'हिशोब (Accounting)',
-    chartOfAccounts: 'खात्यांचा तक्ता',
+    chartOfAccounts: 'खात्यांचा तपशील (Account Details)',
     journalEntries: 'जर्नल नोंदी',
+    cashPayments: 'रोख पेमेंट (Cash Payments)',
+    bankPayments: 'बँक पेमेंट (Bank Payments)',
+    cashReceipts: 'रोख रसीद (Cash Receipts)',
+    bankReceipts: 'बँक रसीद (Bank Receipts)',
     reports: 'अहवाल (MIS & Reports)',
     settings: 'सेटिंग्ज'
   },
@@ -41,7 +52,7 @@ export const mr = {
     profile: 'प्रोफाइल'
   },
   dashboard: {
-    title: 'प्रशासन डॅशबोर्ड',
+    title: 'डॅशबोर्ड',
     subtitle: 'FPC च्या कामगिरी आणि ऑपरेशन्सचे विहंगावलोकन.',
     totalSales: 'एकूण विक्री',
     pendingReceivables: 'प्रलंबित येणे',

@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { CustomDatePicker } from '../../components/CustomDatePicker';
 import { ArrowLeft, Save, Plus, Trash2, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAppContext } from '../../context/AppContext';
 
 interface QuoteLine {
   id: string;
   item: string;
+  itemId?: number;
   hsn: string;
   qty: number;
   rate: number;
@@ -14,9 +17,102 @@ interface QuoteLine {
 
 export function SalesQuotationForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { activeCompany, activeFinancialYear } = useAppContext();
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [lines, setLines] = useState<QuoteLine[]>([
     { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18 }
   ]);
+  const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
+  const [validUntil, setValidUntil] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [quotationNumber, setQuotationNumber] = useState('');
+  const [termsAndConditions, setTermsAndConditions] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (activeCompany?.id) {
+        fetch(`/api/data/InventoryItems?CompanyId=${activeCompany.id}`)
+          .then(res => res.json())
+          .then(data => setInventoryItems(Array.isArray(data) ? data : []))
+          .catch(console.error);
+
+        fetch(`/api/data/Customers?CompanyId=${activeCompany.id}`)
+          .then(res => res.json())
+          .then(data => setCustomers(Array.isArray(data) ? data : []))
+          .catch(console.error);
+        
+        if (id) {
+          fetch(`/api/data/SalesQuotations?CompanyId=${activeCompany.id}`)
+            .then(res => res.json())
+            .then(data => {
+                const quotation = Array.isArray(data) ? data.find(q => q.Id == id) : null;
+                if (quotation) {
+                   setQuotationNumber(quotation.QuotationNumber || '');
+                   setSelectedCustomer(quotation.CustomerId);
+                   setQuoteDate(quotation.QuotationDate.split('/').reverse().join('-'));
+                   setValidUntil(quotation.ValidUntil.split('/').reverse().join('-'));
+                   if (quotation.ItemsData) setLines(JSON.parse(quotation.ItemsData));
+                   setTermsAndConditions(quotation.TermsAndConditions || '');
+                }
+            })
+            .catch(console.error);
+        } else {
+             // Fetch default terms
+             fetch(`/api/data/Companies?Id=${activeCompany.id}`)
+              .then(res => res.json())
+              .then(data => {
+                  const company = Array.isArray(data) ? data[0] : data;
+                  if (company && company.DefaultQuotationTerms) {
+                      setTermsAndConditions(company.DefaultQuotationTerms);
+                  }
+              })
+              .catch(console.error);
+        }
+    }
+  }, [activeCompany?.id, id]);
+
+  const saveQuotation = async () => {
+    setSaving(true);
+    const totals = calculateTotals();
+    const formatDate = (d: string) => {
+        if (!d) return '';
+        const [y, m, day] = d.split('-');
+        return `${day}/${m}/${y}`;
+    };
+
+    const data = {
+        CompanyId: activeCompany?.id,
+        FinancialYearId: activeFinancialYear?.id,
+        CustomerId: selectedCustomer,
+        QuotationDate: formatDate(quoteDate),
+        ValidUntil: formatDate(validUntil),
+        TotalAmount: totals.grandTotal,
+        Status: 'Draft',
+        ItemsData: JSON.stringify(lines),
+        Remarks: '',
+        TermsAndConditions: termsAndConditions,
+        QuotationNumber: quotationNumber
+    };
+
+    try {
+        const url = id ? `/api/data/SalesQuotations/${id}` : '/api/data/SalesQuotations';
+        const method = id ? 'PUT' : 'POST';
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error("Failed to save quotation");
+        navigate('/sales/quotations');
+    } catch (e) {
+        alert("Failed to save quotation.");
+        console.error(e);
+    } finally {
+        setSaving(false);
+    }
+  };
 
   const addLine = () => {
     setLines([...lines, { id: Math.random().toString(), item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18 }]);
@@ -24,6 +120,16 @@ export function SalesQuotationForm() {
 
   const updateLine = (id: string, field: keyof QuoteLine, value: any) => {
     setLines(lines.map(l => l.id === id ? { ...l, [field]: value } : l));
+  };
+
+  const selectItem = (id: string, item: any) => {
+    setLines(lines.map(l => l.id === id ? { 
+      ...l, 
+      item: item.Name || item.name, 
+      itemId: item.Id || item.id || item.ID,
+      rate: item.UnitPrice || item.unitPrice || 0,
+      hsn: item.ItemCode || item.itemCode || ''
+    } : l));
   };
 
   const removeLine = (id: string) => {
@@ -54,188 +160,288 @@ export function SalesQuotationForm() {
   const totals = calculateTotals();
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col space-y-6 pb-12">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col space-y-6 pb-12 select-none font-sans">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => navigate('/sales/quotations')}
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600"
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600 focus:outline-[#8faad8] focus:ring-2 focus:ring-blue-500"
+            title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Create Quotation</h1>
-            <p className="text-sm text-gray-500 mt-1">Prepare a new estimate for a prospective sale.</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{id ? `Edit Quotation - ${quotationNumber}` : 'Create Quotation'}</h1>
+            <p className="text-sm text-gray-500 mt-1">Prepare a{id ? 'n' : ' new'} estimate for a prospective sale.</p>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 bg-white transition-colors">
-            Save Draft
-          </button>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
-            <Save className="w-4 h-4" />
-            Send to Customer
-          </button>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-200 bg-gray-50/50 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Customer</label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option value="">Select Customer/Lead...</option>
-              <option value="1">Ramesh Patel (CUST-001)</option>
-              <option value="2">Agro Retailers (CUST-009)</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Quotation Date</label>
-            <input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Valid Until</label>
-            <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-          </div>
+      <form onSubmit={(e) => { e.preventDefault(); saveQuotation(); }} className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md overflow-hidden block">
+        {/* Green Title Header */}
+        <div className="bg-[#0b8a1c] text-white py-3 px-4 border-b border-blue-900 text-center font-bold text-xl tracking-wide uppercase flex items-center justify-center gap-2">
+          <FileText className="w-5 h-5" /> SALES QUOTATION MASTER
         </div>
 
-        <div className="p-0 overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
-                <th className="font-medium p-3">Item Details</th>
-                <th className="font-medium p-3 w-24">HSN</th>
-                <th className="font-medium p-3 w-24 text-right">Qty</th>
-                <th className="font-medium p-3 w-32 text-right">Rate (₹)</th>
-                <th className="font-medium p-3 w-24 text-right">Disc (%)</th>
-                <th className="font-medium p-3 w-24 text-right">GST (%)</th>
-                <th className="font-medium p-3 w-32 text-right">Amount</th>
-                <th className="font-medium p-3 w-12 text-center"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {lines.map((line) => {
-                const taxable = (line.qty * line.rate) * (1 - line.discount / 100);
-                const total = taxable * (1 + line.gstRate / 100);
-                
-                return (
-                  <tr key={line.id} className="group hover:bg-gray-50/50">
-                    <td className="p-3">
-                      <input 
-                        type="text" 
-                        placeholder="Search item..." 
-                        value={line.item}
-                        onChange={e => updateLine(line.id, 'item', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none transition-all"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input 
-                        type="text" 
-                        value={line.hsn}
-                        onChange={e => updateLine(line.id, 'hsn', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none transition-all"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input 
-                        type="number" 
-                        min="1"
-                        value={line.qty || ''}
-                        onChange={e => updateLine(line.id, 'qty', Number(e.target.value))}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none text-right transition-all font-mono"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={line.rate || ''}
-                        onChange={e => updateLine(line.id, 'rate', Number(e.target.value))}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none text-right transition-all font-mono"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input 
-                        type="number" 
-                        min="0" max="100"
-                        value={line.discount || ''}
-                        onChange={e => updateLine(line.id, 'discount', Number(e.target.value))}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none text-right transition-all font-mono"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <select 
-                        value={line.gstRate}
-                        onChange={e => updateLine(line.id, 'gstRate', Number(e.target.value))}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded bg-transparent focus:bg-white text-sm outline-none text-right transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="0">0%</option>
-                        <option value="5">5%</option>
-                        <option value="12">12%</option>
-                        <option value="18">18%</option>
-                        <option value="28">28%</option>
-                      </select>
-                    </td>
-                    <td className="p-3 text-right font-medium text-gray-900 font-mono text-sm">
-                      {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-3 text-center">
-                      <button 
-                        onClick={() => removeLine(line.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                        disabled={lines.length === 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/* Section 1: General Info */}
+        <div className="border-b border-blue-900">
+          <div className="bg-[#e2e8f0] px-4 py-2 font-bold text-[#1e293b] border-b border-blue-900 text-xs tracking-wider uppercase">
+            I. Quotation Header details
+          </div>
 
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-start">
-          <button 
-            onClick={addLine}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-blue-50"
-          >
-            <Plus className="w-4 h-4" /> Add Row
-          </button>
-          
-          <div className="w-72 bg-white border border-gray-200 rounded-lg shadow-sm p-4 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Subtotal (Taxable)</span>
-              <span className="font-mono text-gray-900">{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            {totals.totalDiscount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Discount</span>
-                <span className="font-mono">-{totals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x-2 md:divide-[#8faad8]">
+            {/* Left Column */}
+            <div className="flex flex-col">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+                  Customer <span className="text-red-500 ml-1">*</span>
+                </div>
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+                  <select 
+                    required
+                    value={selectedCustomer}
+                    onChange={e => setSelectedCustomer(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
+                  >
+                    <option value="">Select Customer...</option>
+                    {customers.map(c => <option key={c.Id} value={c.Id}>{c.CustomerName}</option>)}
+                  </select>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Total GST</span>
-              <span className="font-mono text-gray-900">{totals.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:border-b-0 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+                  Quotation Date <span className="text-red-500 ml-1">*</span>
+                </div>
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+                  <div className="w-full max-w-[180px]">
+                    <CustomDatePicker required value={quoteDate} onChange={setQuoteDate} className="w-full font-mono !py-1" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
-              <span className="font-semibold text-gray-900">Grand Total</span>
-              <span className="text-lg font-bold text-gray-900 font-mono">
-                ₹{totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
+
+            {/* Right Column */}
+            <div className="flex flex-col">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+                  Valid Until <span className="text-red-500 ml-1">*</span>
+                </div>
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+                  <div className="w-full max-w-[180px]">
+                    <CustomDatePicker required value={validUntil} onChange={setValidUntil} className="w-full font-mono !py-1" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:border-b-0 border-b border-blue-900 min-h-[48px] items-stretch bg-[#f1f5f9]">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
+                  Financial Year
+                </div>
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
+                  <span className="inline-block bg-[#cbd5e1]/40 border border-[#8faad8] rounded px-3 py-1 font-mono text-xs font-bold text-slate-700 tracking-wide select-none">
+                    {activeFinancialYear?.name || 'N/A'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200">
-          <label className="text-sm font-medium text-gray-700 block mb-2">Terms & Conditions</label>
-          <textarea 
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-            defaultValue="1. Quotes are conditionally valid for 15 days.\n2. Prices are subject to change based on raw material availability."
-          ></textarea>
+        {/* Section 2: Lines Details */}
+        <div>
+          <div className="bg-[#e2e8f0] px-4 py-2 font-bold text-[#1e293b] border-b border-blue-900 text-xs tracking-wider uppercase">
+            II. Line Item Specifications
+          </div>
+
+          <div className="p-4 bg-white overflow-x-auto">
+            <div className="border border-[#8faad8] rounded overflow-hidden min-w-[760px]">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#f1f5f9] text-gray-800 text-xs font-bold uppercase tracking-wider border-b border-blue-900">
+                    <th className="p-3 border-r border-blue-900">Item Details</th>
+                    <th className="p-3 w-28 border-r border-blue-900 text-center">HSN</th>
+                    <th className="p-3 w-32 border-r border-blue-900 text-center">Qty</th>
+                    <th className="p-3 w-28 text-right border-r border-blue-900">Rate (₹)</th>
+                    <th className="p-3 w-20 text-right border-r border-blue-900">Disc (%)</th>
+                    <th className="p-3 w-24 text-center border-r border-blue-900">GST (%)</th>
+                    <th className="p-3 w-32 text-right border-r border-blue-900">Total Amt</th>
+                    <th className="p-3 w-12 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#8faad8]">
+                  {lines.map((line) => {
+                    const taxable = (line.qty * line.rate) * (1 - line.discount / 100);
+                    const total = taxable * (1 + line.gstRate / 100);
+                    
+                    return (
+                      <tr key={line.id} className="bg-white hover:bg-slate-50">
+                        <td className="p-2 border-r border-blue-900">
+                          <input 
+                            required
+                            type="text" 
+                            list={`items-${line.id}`}
+                            placeholder="Select or type item..." 
+                            value={line.item}
+                            onChange={e => {
+                              const val = e.target.value;
+                              updateLine(line.id, 'item', val);
+                              const item = inventoryItems.find(i => (i.Name || i.name) === val);
+                              if (item) {
+                                selectItem(line.id, item);
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                          />
+                          <datalist id={`items-${line.id}`}>
+                            {inventoryItems.map(item => (
+                              <option key={item.Id || item.id || item.ID} value={item.Name || item.name} />
+                            ))}
+                          </datalist>
+                        </td>
+                        <td className="p-2 border-r border-blue-900">
+                          <input 
+                            type="text" 
+                            value={line.hsn}
+                            placeholder="HSN"
+                            onChange={e => updateLine(line.id, 'hsn', e.target.value)}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center"
+                          />
+                        </td>
+                        <td className="p-2 w-32 border-r border-blue-900">
+                          <input 
+                            required
+                            type="number" 
+                            min="1"
+                            value={line.qty || ''}
+                            onChange={e => updateLine(line.id, 'qty', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center font-bold text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 border-r border-blue-900">
+                          <input 
+                            required
+                            type="number" 
+                            min="0"
+                            value={line.rate || ''}
+                            onChange={e => updateLine(line.id, 'rate', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right font-semibold"
+                          />
+                        </td>
+                        <td className="p-2 border-r border-blue-900">
+                          <input 
+                            type="number" 
+                            min="0" max="100"
+                            value={line.discount || ''}
+                            onChange={e => updateLine(line.id, 'discount', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right"
+                          />
+                        </td>
+                        <td className="p-2 border-r border-blue-900">
+                          <select 
+                            value={line.gstRate}
+                            onChange={e => updateLine(line.id, 'gstRate', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer text-center font-bold"
+                          >
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18">18%</option>
+                            <option value="28">28%</option>
+                          </select>
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900 text-sm border-r border-blue-900 bg-slate-50">
+                          ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-2 text-center">
+                          <button 
+                            type="button"
+                            onClick={() => removeLine(line.id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                            disabled={lines.length === 1}
+                            title="Remove Row"
+                          >
+                            <Trash2 className="w-4 h-4 mx-auto" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              <div className="p-2 bg-[#f8fafc] border-t-2 border-blue-900 flex justify-between items-center">
+                <button 
+                  type="button"
+                  onClick={addLine}
+                  className="text-sm font-bold text-blue-800 hover:text-blue-900 flex items-center gap-1 transition-colors px-3 py-1 bg-white border border-[#cbd5e1] hover:border-[#8faad8] rounded"
+                >
+                  <Plus className="w-4 h-4" /> ADD ROW LINE
+                </button>
+
+                <div className="w-80 bg-slate-100 border border-[#8faad8] rounded-lg p-3 space-y-2 mt-1 mr-1">
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                    <span>Taxable Subtotal:</span>
+                    <span className="font-mono text-slate-950">₹{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {totals.totalDiscount > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-green-700 bg-green-100/50 px-1 rounded">
+                      <span>Total Disc Allotted:</span>
+                      <span className="font-mono">-₹{totals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                    <span>GST Outflow:</span>
+                    <span className="font-mono text-slate-950">₹{totals.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="pt-2 border-t border-blue-900 flex justify-between items-center bg-emerald-100/30 px-1 rounded">
+                    <span className="font-bold text-emerald-950 text-sm">Grand Total (₹):</span>
+                    <span className="text-base font-black text-emerald-900 font-mono">
+                      ₹{totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Section 3: Terms & Conditions */}
+        <div>
+          <div className="bg-[#e2e8f0] px-4 py-2 font-bold text-[#1e293b] border-b border-blue-900 text-xs tracking-wider uppercase">
+            III. Terms & Conditions
+          </div>
+          <div className="p-3 bg-white">
+            <textarea 
+              rows={3}
+              placeholder="Terms and conditions..."
+              value={termsAndConditions}
+              onChange={e => setTermsAndConditions(e.target.value)}
+              className="w-full px-3 py-2 border border-[#cbd5e1] focus:border-[#8faad8] focus:ring-1 focus:ring-blue-500 rounded text-sm focus:outline-none bg-[#f4fbf4] block font-sans"
+            ></textarea>
+          </div>
+        </div>
+
+        {/* Action buttons at footer */}
+        <div className="bg-[#f1f5f9] border-t-2 border-blue-900 p-4 flex justify-end gap-3">
+          <button 
+            type="button"
+            onClick={() => navigate('/sales/quotations')}
+            className="px-4 py-2 border border-[#8faad8] rounded font-bold text-[#1e293b] hover:bg-[#cbd5e1] transition-colors bg-white text-sm"
+          >
+            CANCEL
+          </button>
+          <button 
+            type="submit"
+            disabled={saving}
+            className="bg-[#0b8a1c] hover:bg-[#097016] text-white px-5 py-2 rounded font-bold border border-blue-900 flex items-center gap-2 transition-colors uppercase text-sm disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'SAVING...' : (id ? 'UPDATE QUOTATION' : 'SEND TO CUSTOMER')}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

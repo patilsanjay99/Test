@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Shield, MoreVertical, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const mockUsers = [
   { id: '1', name: 'Sanjay Kumar', email: 'admin@fpc.com', role: 'Super Admin', status: 'Active', lastLogin: '15/03/2024 09:30 AM' },
@@ -8,9 +9,15 @@ const mockUsers = [
   { id: '3', name: 'Ramesh Patel', email: 'ramesh.p@fpc.com', role: 'Accountant', status: 'Inactive', lastLogin: '01/03/2024 04:45 PM' },
 ];
 
+import { formatDate } from '../../utils/dateFormatter';
+
 export function Users() {
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [systemRoles, setSystemRoles] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
   const navigate = useNavigate();
 
   const fetchUsers = async () => {
@@ -25,24 +32,45 @@ export function Users() {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const res = await fetch('/api/data/SystemRoles');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemRoles(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
+  const filteredUsers = users.filter((user) => {
+    const matchesRole = !selectedRole || user.Role === selectedRole;
+    const matchesSearch = !searchTerm || 
+      (user.Name && user.Name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.Email && user.Email.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesRole && matchesSearch;
+  });
+
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">System Users</h1>
           <p className="text-sm text-gray-500 mt-1">Manage system access, roles, and security policies.</p>
         </div>
-        <button 
+        {hasPermission('/master/users', 'add') && ( <button 
           onClick={() => navigate('/master/users/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Add User
-        </button>
+        </button> )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
@@ -52,18 +80,23 @@ export function Users() {
             <input 
               type="text" 
               placeholder="Search users..." 
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-[#f4fbf4]"
             />
           </div>
           <div className="flex gap-2">
-            <select className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <select 
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]"
+            >
               <option value="">All Roles</option>
-              <option value="Super Admin">Super Admin</option>
-              <option value="Admin">Admin</option>
-              <option value="HR">HR</option>
-              <option value="Accountant">Accountant</option>
-              <option value="Project Manager">Project Manager</option>
-              <option value="Employee">Employee</option>
+              {systemRoles.map((role: any) => (
+                <option key={role.Id || role.id} value={role.RoleName}>
+                  {role.RoleName}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -82,9 +115,9 @@ export function Users() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr><td colSpan={5} className="p-4 text-center text-sm text-gray-500">Loading...</td></tr>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <tr><td colSpan={5} className="p-4 text-center text-sm text-gray-500">No records found</td></tr>
-              ) : users.map((user) => (
+              ) : filteredUsers.map((user) => (
                 <tr key={user.Id} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
@@ -111,15 +144,17 @@ export function Users() {
                     </span>
                   </td>
                   <td className="p-4 text-sm text-gray-500">
-                    {user.CreatedAt ? new Date(user.CreatedAt).toLocaleDateString() : '-'}
+                    {formatDate(user.CreatedAt)}
                   </td>
                   <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Reset Password">
                       <Key className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit User">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                    {hasPermission('/master', 'edit') && (
+                      <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit User">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      )}
                     <button className="text-gray-400 hover:text-gray-600 transition-colors">
                       <MoreVertical className="w-4 h-4" />
                     </button>
@@ -130,7 +165,7 @@ export function Users() {
           </table>
         </div>
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-sm text-gray-500">
-          Showing 1 to {users.length} of {users.length} entries
+          Showing 1 to {filteredUsers.length} of {filteredUsers.length} entries
           <div className="flex gap-1">
             <button className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-300 cursor-not-allowed" disabled>Prev</button>
             <button className="px-3 py-1 border border-gray-300 rounded bg-blue-50 text-blue-600 font-medium border-blue-200">1</button>

@@ -1,10 +1,195 @@
-import React, { useState } from 'react';
-import { Save, Building2, Receipt, Shield, Bell, Database, Download, Code } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { Save, Building2, Receipt, Shield, Bell, Database, Download, Code, ClipboardList, Cloud } from 'lucide-react';
 import JSZip from 'jszip';
 
 export function Settings() {
+  const { hasPermission } = useAuth();
+  const [sequences, setSequences] = useState<any[]>([]);
+  const { user } = useAuth();
+  const companyId = user?.companyId || 1;
+  const [defaultQuotationTerms, setDefaultQuotationTerms] = useState('');
+  const [defaultSalesOrderTerms, setDefaultSalesOrderTerms] = useState('');
+  const [defaultSalesInvoiceTerms, setDefaultSalesInvoiceTerms] = useState('');
+  const [defaultPurchaseOrderTerms, setDefaultPurchaseOrderTerms] = useState('');
+
+  useEffect(() => {
+    fetch(`/api/data/Companies?Id=${companyId}`)
+      .then(res => res.json())
+      .then(data => {
+        const company = Array.isArray(data) ? data[0] : data;
+        if (company) {
+          if (company.DefaultQuotationTerms) {
+            setDefaultQuotationTerms(company.DefaultQuotationTerms);
+          }
+          if (company.DefaultSalesOrderTerms) {
+            setDefaultSalesOrderTerms(company.DefaultSalesOrderTerms);
+          }
+          if (company.DefaultSalesInvoiceTerms) {
+            setDefaultSalesInvoiceTerms(company.DefaultSalesInvoiceTerms);
+          }
+          if (company.DefaultPurchaseOrderTerms) {
+            setDefaultPurchaseOrderTerms(company.DefaultPurchaseOrderTerms);
+          }
+        }
+      })
+      .catch(console.error);
+
+    fetch(`/api/document-sequences/${companyId}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log("Fetched sequences:", data);
+        const TYPES = ['SalesInvoices', 'PurchaseInvoices', 'SalesOrders', 'PurchaseOrders', 'SalesQuotations', 'PurchaseQuotations', 'ReceiptVouchers', 'PaymentVouchers', 'BankPayments', 'BankReceipts', 'JournalEntries'];
+        const allSequences = TYPES.map(type => {
+            const existing = data.find((s: any) => s.DocumentType === type);
+            return existing || { DocumentType: type, Prefix: '', CompanyId: companyId, FinancialYear: '2026-2027' };
+        });
+        setSequences(allSequences);
+      })
+      .catch(err => console.error('Fetch error:', err));
+  }, [companyId]);
+
   const [activeTab, setActiveTab] = useState('general');
   const [isGeneratingZip, setIsGeneratingZip] = useState(false);
+  const [isGeneratingDeployZip, setIsGeneratingDeployZip] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('HR');
+
+  const [isCleanupUnlocked, setIsCleanupUnlocked] = useState(false);
+  const [cleanupPasswordInput, setCleanupPasswordInput] = useState('');
+
+  const [systemRoles, setSystemRoles] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/data/SystemRoles')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        setSystemRoles(data);
+        if (data.length > 0 && !data.find((d: any) => d.RoleName === selectedRole)) {
+          setSelectedRole(data[0].RoleName);
+        }
+      })
+      .catch();
+  }, []);
+
+  const defaultPermissions = {
+    'Master Data: Company Details': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Financial Years': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Customer Details': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Vendor Details': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Bank Details': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Users & Roles': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Item Details': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Locations': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Account Groups': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Chart of Accounts': { view: true, add: false, edit: false, delete: false },
+    'FPC Management: FPC Members': { view: true, add: true, edit: true, delete: false },
+    'FPC Management: Member Register': { view: true, add: false, edit: false, delete: false },
+    'FPC Management: Share Management': { view: true, add: true, edit: true, delete: false },
+    'FPC Management: Loan Management': { view: true, add: true, edit: true, delete: false },
+    'Sales: Sales Quotations': { view: true, add: false, edit: false, delete: false },
+    'Sales: Sales Orders': { view: true, add: false, edit: false, delete: false },
+    'Sales: Sales Invoices': { view: true, add: false, edit: false, delete: false },
+    'Sales: Sales Returns': { view: true, add: false, edit: false, delete: false },
+    'Purchase: Purchase Orders': { view: true, add: false, edit: false, delete: false },
+    'Purchase: Purchase Invoices': { view: true, add: false, edit: false, delete: false },
+    'Purchase: Purchase Returns': { view: true, add: false, edit: false, delete: false },
+    'Inventory: Stock Summary': { view: true, add: false, edit: false, delete: false },
+    'Inventory: Stock Ledger': { view: true, add: false, edit: false, delete: false },
+    'Inventory: Stock Adjustments': { view: true, add: false, edit: false, delete: false },
+    'Assets: Asset Register': { view: true, add: false, edit: false, delete: false },
+    'Accounting: Journal Entries': { view: true, add: false, edit: false, delete: false },
+    'Accounting: Cash Payments': { view: true, add: false, edit: false, delete: false },
+    'Accounting: Bank Payments': { view: true, add: false, edit: false, delete: false },
+    'Accounting: Cash Receipts': { view: true, add: false, edit: false, delete: false },
+    'Accounting: Bank Receipts': { view: true, add: false, edit: false, delete: false },
+    'MIS & Reports: MIS & Reports': { view: true, add: false, edit: false, delete: false },
+    'Settings: Settings': { view: true, add: true, edit: true, delete: true },
+  };
+
+  const [permissions, setPermissions] = useState<any>({});
+
+  useEffect(() => {
+    const stored = localStorage.getItem('fpc_role_permissions');
+    
+    // Create Super Admin permissions: all actions true, except for reports which only have view
+    const superAdminPermissions = Object.keys(defaultPermissions).reduce((acc: any, module: string) => {
+      const isReport = module.startsWith('Reports');
+      acc[module] = isReport 
+        ? { view: true, add: false, edit: false, delete: false }
+        : { view: true, add: true, edit: true, delete: true };
+      return acc;
+    }, {});
+
+    if (stored) {
+      const parsedStored = JSON.parse(stored);
+      // Merge stored with default to ensure new modules are included.
+      const merged = { ...parsedStored };
+      Object.keys(merged).forEach(role => {
+          merged[role] = { ...defaultPermissions, ...merged[role] };
+      });
+      setPermissions(merged);
+    } else {
+      setPermissions({ 
+        'HR': defaultPermissions,
+        'Super Admin': superAdminPermissions 
+      });
+    }
+  }, []);
+
+  const handlePermissionChange = (module: string, action: string, value: boolean) => {
+    setPermissions((prev: any) => ({
+      ...prev,
+      [selectedRole]: {
+        ...(prev[selectedRole] || defaultPermissions),
+        [module]: {
+          ...(prev[selectedRole]?.[module] || defaultPermissions[module as keyof typeof defaultPermissions]),
+          [action]: value
+        }
+      }
+    }));
+  };
+
+  const handleBulkActionChange = (action: string, value: boolean) => {
+    setPermissions((prev: any) => {
+      // Ensure we merge with defaultPermissions to have all modules
+      const currentRole = { ...defaultPermissions, ...(prev[selectedRole] || {}) };
+      const newRolePermissions = { ...currentRole };
+      
+      Object.keys(newRolePermissions).forEach(module => {
+        // Can't set permissions for Reports, skip them
+        if (!module.startsWith('MIS & Reports:') || action === 'view') {
+          newRolePermissions[module] = {
+            ...newRolePermissions[module],
+            [action]: value
+          };
+        }
+      });
+      return { ...prev, [selectedRole]: newRolePermissions };
+    });
+  };
+
+  const handleBulkModuleChange = (module: string, value: boolean) => {
+    setPermissions((prev: any) => {
+      const currentRole = { ...defaultPermissions, ...(prev[selectedRole] || {}) };
+      const modulePerms = currentRole[module] || defaultPermissions[module as keyof typeof defaultPermissions];
+      
+      const newModulePerms = { ...modulePerms };
+      Object.keys(newModulePerms).forEach(action => {
+        if (!module.startsWith('MIS & Reports:') || action === 'view') {
+          newModulePerms[action] = value;
+        }
+      });
+      
+      return { ...prev, [selectedRole]: { ...currentRole, [module]: newModulePerms } };
+    });
+  };
+
+  const currentRolePerms = { ...defaultPermissions, ...(permissions[selectedRole] || {}) };
 
   const handleDownloadSQL = () => {
     const sqlContent = `-- Krishi ERP FPC Management System - Complete Database Script & Data
@@ -100,7 +285,7 @@ CREATE TABLE Customers (
     TANNo NVARCHAR(50),
     PANNo NVARCHAR(50),
     CINNo NVARCHAR(50),
-    Commissionrate DECIMAL(18,2) DEFAULT 0,
+    Commissionrate NVARCHAR(50),
     AccountingCircle NVARCHAR(100),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
@@ -244,7 +429,7 @@ SET IDENTITY_INSERT Accounts OFF;
   const handleDownloadZip = async () => {
     try {
       setIsGeneratingZip(true);
-      const response = await fetch('/api/v1/export/source_v2');
+      const response = await fetch('/api/export/source_v2');
       if (!response.ok) throw new Error('Network response was not ok');
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -263,14 +448,82 @@ SET IDENTITY_INSERT Accounts OFF;
     }
   };
 
+  const handleDownloadDeployZip = async () => {
+    try {
+      setIsGeneratingDeployZip(true);
+      const response = await fetch('/api/export/deployment');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'fpc-cloud-deployment-package.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download deployment package', e);
+      alert('Failed to download cloud package ZIP');
+    } finally {
+      setIsGeneratingDeployZip(false);
+    }
+  };
+
+  const handleSave = async () => {
+    localStorage.setItem('fpc_role_permissions', JSON.stringify(permissions));
+    
+    // Save company terms
+    const termRes = await fetch(`/api/data/Companies/${companyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            DefaultQuotationTerms: defaultQuotationTerms,
+            DefaultSalesOrderTerms: defaultSalesOrderTerms,
+            DefaultSalesInvoiceTerms: defaultSalesInvoiceTerms,
+            DefaultPurchaseOrderTerms: defaultPurchaseOrderTerms
+        })
+    });
+    if (!termRes.ok) {
+        console.error('Failed to save terms');
+        alert('Failed to save terms');
+        return;
+    }
+    
+    // Save sequences
+    for (const seq of sequences) {
+        const res = await fetch('/api/document-sequences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                CompanyId: companyId,
+                DocumentType: seq.DocumentType,
+                Prefix: seq.Prefix,
+                FinancialYear: seq.FinancialYear || '2026-2027'
+            })
+        });
+        if (!res.ok) {
+            console.error(`Failed to save ${seq.DocumentType}:`, await res.text());
+            alert(`Failed to save ${seq.DocumentType}`);
+            return;
+        }
+    }
+
+    alert('Settings saved successfully!');
+    window.location.reload(); // Refresh to apply changes if any
+  };
+
   return (
-    <div className="max-w-5xl mx-auto flex flex-col h-full space-y-6 pb-12">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col h-full space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">System Settings</h1>
           <p className="text-sm text-gray-500 mt-1">Configure global application parameters and preferences.</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
+        <button 
+          onClick={handleSave}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
+        >
           <Save className="w-4 h-4" />
           Save Changes
         </button>
@@ -293,10 +546,10 @@ SET IDENTITY_INSERT Accounts OFF;
                <Receipt className="w-4 h-4" /> Tax & Finance
              </button>
              <button 
-               onClick={() => setActiveTab('security')}
-               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+               onClick={() => setActiveTab('permissions')}
+               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'permissions' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
              >
-               <Shield className="w-4 h-4" /> Security & Access
+               <Shield className="w-4 h-4" /> Role & Permissions
              </button>
              <button 
                onClick={() => setActiveTab('notifications')}
@@ -309,6 +562,12 @@ SET IDENTITY_INSERT Accounts OFF;
                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'backup' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
              >
                <Database className="w-4 h-4" /> Backup & Restore
+             </button>
+             <button 
+               onClick={() => setActiveTab('cleanup')}
+               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-red-600 ${activeTab === 'cleanup' ? 'bg-red-50' : 'hover:bg-red-50'}`}
+             >
+               <ClipboardList className="w-4 h-4" /> Data Cleanup
              </button>
           </div>
         </div>
@@ -327,7 +586,7 @@ SET IDENTITY_INSERT Accounts OFF;
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-gray-700">Financial Year Start</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]">
                         <option value="apr-mar">1st April to 31st March (India)</option>
                         <option value="jan-dec">1st January to 31st December</option>
                       </select>
@@ -335,7 +594,7 @@ SET IDENTITY_INSERT Accounts OFF;
 
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-gray-700">Date Format</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]">
                         <option value="DD/MM/YYYY">DD/MM/YYYY (31/12/2024)</option>
                         <option value="MM/DD/YYYY">MM/DD/YYYY (12/31/2024)</option>
                         <option value="YYYY-MM-DD">YYYY-MM-DD (2024/12/31)</option>
@@ -344,18 +603,30 @@ SET IDENTITY_INSERT Accounts OFF;
 
                      <div className="space-y-1.5">
                       <label className="text-sm font-medium text-gray-700">Currency Symbol</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]">
                         <option value="INR">₹ (INR - Indian Rupee)</option>
                         <option value="USD">$ (USD - US Dollar)</option>
                       </select>
                     </div>
                     
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Timezone</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="IST">Asia/Kolkata (IST)</option>
-                        <option value="UTC">UTC</option>
-                      </select>
+                    <div className="space-y-1.5 md:col-span-2">
+                       <label className="text-sm font-medium text-gray-700">Default Quotation Terms & Conditions</label>
+                       <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]" rows={4} placeholder="Enter default terms and conditions..." value={defaultQuotationTerms} onChange={(e) => setDefaultQuotationTerms(e.target.value)}></textarea>
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                       <label className="text-sm font-medium text-gray-700">Default Sales Orders Terms & Conditions</label>
+                       <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]" rows={4} placeholder="Enter default sales order terms and conditions..." value={defaultSalesOrderTerms} onChange={(e) => setDefaultSalesOrderTerms(e.target.value)}></textarea>
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                       <label className="text-sm font-medium text-gray-700">Default Sales Invoice Terms & Conditions</label>
+                       <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]" rows={4} placeholder="Enter default sales invoice terms and conditions..." value={defaultSalesInvoiceTerms} onChange={(e) => setDefaultSalesInvoiceTerms(e.target.value)}></textarea>
+                     </div>
+
+                     <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-sm font-medium text-gray-700">Default Purchase Orders Terms & Conditions</label>
+                        <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4]" rows={4} placeholder="Enter default purchase order terms and conditions..." value={defaultPurchaseOrderTerms} onChange={(e) => setDefaultPurchaseOrderTerms(e.target.value)}></textarea>
                     </div>
                   </div>
                 </div>
@@ -367,30 +638,33 @@ SET IDENTITY_INSERT Accounts OFF;
                   <p className="text-xs text-gray-500 mt-1">Configure auto-generated numbering prefixes.</p>
                 </div>
                 <div className="p-6">
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Sales Invoice</label>
-                      <div className="flex">
-                        <input type="text" defaultValue="INV/" className="w-20 px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-center uppercase" />
-                        <input type="text" defaultValue="2024-25" className="flex-1 px-3 py-2 border-t border-b border-r border-gray-300 rounded-r-md text-sm bg-gray-50 text-gray-500" readOnly />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {['SalesInvoices', 'PurchaseInvoices', 'SalesOrders', 'PurchaseOrders', 'SalesQuotations', 'PurchaseQuotations', 'ReceiptVouchers', 'PaymentVouchers', 'BankPayments', 'BankReceipts', 'JournalEntries'].map((type) => {
+                      const seq = sequences.find(s => s.DocumentType === type) || { DocumentType: type, Prefix: '', CompanyId: companyId, FinancialYear: '2026-2027' };
+                      return (
+                      <div key={type} className="space-y-1.5">
+                        <label className="text-sm font-medium text-gray-700">{type.replace(/([A-Z])/g, ' $1').trim()} Prefix</label>
+                        <div className="flex">
+                          <input 
+                            type="text" 
+                            value={seq.Prefix}
+                            onChange={(e) => {
+                               const newPrefix = e.target.value;
+                               console.log("Setting prefix for", type, "to", newPrefix);
+                               setSequences(prev => {
+                                 const exists = prev.some(s => s.DocumentType === type);
+                                 if (!exists) {
+                                   return [...prev, { DocumentType: type, Prefix: newPrefix, CompanyId: companyId, FinancialYear: '2026-2027' }];
+                                 }
+                                 return prev.map(s => s.DocumentType === type ? { ...s, Prefix: newPrefix } : s);
+                               });
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[#f4fbf4] uppercase" 
+                          />
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Purchase Order</label>
-                      <div className="flex">
-                        <input type="text" defaultValue="PO/" className="w-20 px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-center uppercase" />
-                        <input type="text" defaultValue="2024-25" className="flex-1 px-3 py-2 border-t border-b border-r border-gray-300 rounded-r-md text-sm bg-gray-50 text-gray-500" readOnly />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Receipt Voucher</label>
-                      <div className="flex">
-                        <input type="text" defaultValue="RV/" className="w-20 px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-center uppercase" />
-                        <input type="text" defaultValue="2024-25" className="flex-1 px-3 py-2 border-t border-b border-r border-gray-300 rounded-r-md text-sm bg-gray-50 text-gray-500" readOnly />
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -409,14 +683,129 @@ SET IDENTITY_INSERT Accounts OFF;
             </div>
           )}
 
-          {activeTab === 'security' && (
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-                <h2 className="text-lg font-semibold text-gray-900">Security & Access Control</h2>
-                <p className="text-xs text-gray-500 mt-1">Manage user roles, permissions, and security policies.</p>
+          {activeTab === 'permissions' && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
+              <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Role & Permissions Control</h2>
+                  <p className="text-xs text-gray-500 mt-1">Manage user roles, permissions, and security policies.</p>
+                </div>
+                <select 
+                  className="text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 pl-3 pr-10 py-2"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                >
+                  {systemRoles.map((r) => (
+                    <option key={r.Id || r.id} value={r.RoleName}>{r.RoleName}</option>
+                  ))}
+                  {systemRoles.length === 0 && (
+                    <>
+                      <option>Super Admin</option>
+                      <option>Accountant</option>
+                      <option>Manager</option>
+                      <option>HR</option>
+                    </>
+                  )}
+                </select>
               </div>
-              <div className="p-6">
-                <p className="text-sm text-gray-500 text-center py-8">Role based access controls will appear here.</p>
+              <div className="p-0 overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                  <colgroup>
+                    <col className="w-1/3" />
+                    <col className="w-24" />
+                    <col className="w-16" />
+                    <col className="w-16" />
+                    <col className="w-16" />
+                    <col className="w-16" />
+                    <col className="w-16" />
+                  </colgroup>
+                  <thead className="bg-[#f8fafc]">
+                    <tr>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Module</th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        View<br/>
+                        <input type="checkbox" className="h-3 w-3 mt-1" checked={Object.values(currentRolePerms).every((p: any) => p.view)} onChange={(e) => handleBulkActionChange('view', e.target.checked)} />
+                      </th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Add<br/>
+                        <input type="checkbox" className="h-3 w-3 mt-1" checked={Object.entries(currentRolePerms).filter(([module]) => !module.startsWith('MIS & Reports:')).every(([_, p]: any) => p.add)} onChange={(e) => handleBulkActionChange('add', e.target.checked)} />
+                      </th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Edit<br/>
+                        <input type="checkbox" className="h-3 w-3 mt-1" checked={Object.entries(currentRolePerms).filter(([module]) => !module.startsWith('MIS & Reports:')).every(([_, p]: any) => p.edit)} onChange={(e) => handleBulkActionChange('edit', e.target.checked)} />
+                      </th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Delete<br/>
+                        <input type="checkbox" className="h-3 w-3 mt-1" checked={Object.entries(currentRolePerms).filter(([module]) => !module.startsWith('MIS & Reports:')).every(([_, p]: any) => p.delete)} onChange={(e) => handleBulkActionChange('delete', e.target.checked)} />
+                      </th>
+                      <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">All Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {Object.keys(defaultPermissions).map((module) => (
+                      <tr key={module} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-4 text-sm font-medium text-gray-900 break-words">{module}</td>
+                        <td className="px-2 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${module.startsWith('MIS & Reports:') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                            {module.startsWith('MIS & Reports:') ? 'Report' : 'Data Entry'}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center">
+                          <input 
+                            type="checkbox" 
+                            className="h-4 w-4 text-blue-600 rounded border-gray-300 mx-auto" 
+                            checked={currentRolePerms[module]?.view || false}
+                            onChange={(e) => handlePermissionChange(module, 'view', e.target.checked)}
+                          />
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center">
+                          {module.startsWith('MIS & Reports:') ? <span className="text-gray-300">-</span> : (
+                            <input 
+                              type="checkbox" 
+                              className="h-4 w-4 text-blue-600 rounded border-gray-300 mx-auto" 
+                              checked={currentRolePerms[module]?.add || false}
+                              onChange={(e) => handlePermissionChange(module, 'add', e.target.checked)}
+                            />
+                          )}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center">
+                          {module.startsWith('MIS & Reports:') ? <span className="text-gray-300">-</span> : (
+                            <input 
+                              type="checkbox" 
+                              className="h-4 w-4 text-blue-600 rounded border-gray-300 mx-auto" 
+                              checked={currentRolePerms[module]?.edit || false}
+                              onChange={(e) => handlePermissionChange(module, 'edit', e.target.checked)}
+                            />
+                          )}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center">
+                          {module.startsWith('MIS & Reports:') ? <span className="text-gray-300">-</span> : (
+                            <input 
+                              type="checkbox" 
+                              className="h-4 w-4 text-blue-600 rounded border-gray-300 mx-auto" 
+                              checked={currentRolePerms[module]?.delete || false}
+                              onChange={(e) => handlePermissionChange(module, 'delete', e.target.checked)}
+                            />
+                          )}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center">
+                          <input 
+                             type="checkbox" 
+                             className="h-4 w-4 text-blue-600 rounded border-gray-300 mx-auto" 
+                             title="Toggle all for module"
+                             checked={
+                               module.startsWith('MIS & Reports:') 
+                               ? currentRolePerms[module].view 
+                               : (currentRolePerms[module].view && currentRolePerms[module].add && currentRolePerms[module].edit && currentRolePerms[module].delete)
+                             }
+                             onChange={(e) => handleBulkModuleChange(module, e.target.checked)}
+                           />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -444,22 +833,23 @@ SET IDENTITY_INSERT Accounts OFF;
                   <div className="flex items-start justify-between border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
                     <div className="space-y-1">
                       <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                        <Database className="w-4 h-4 text-blue-600" />
-                        Complete Database Script & Data
+                        <Cloud className="w-4 h-4 text-blue-600" />
+                        Precompilied Cloud Deployment Package
                       </h3>
                       <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
-                        Downloads the complete SQL database script. Includes schema definitions (tables, relations), stored procedures, constraints, and current live data (Point-in-time) for direct restoration.
+                        Downloads a pre-built directory containing the compiled React frontend, bundled single-file Express server (no dev compilation/bundling required in cloud), and configuration files. Designed specifically for instant production cloud upload.
                       </p>
                     </div>
                     <button 
-                      onClick={handleDownloadSQL}
-                      className="shrink-0 flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={handleDownloadDeployZip}
+                      disabled={isGeneratingDeployZip}
+                      className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isGeneratingDeployZip ? 'text-gray-400 cursor-not-allowed bg-gray-100 border border-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                     >
-                      <Download className="w-4 h-4" />
-                      Download SQL Script
+                      <Download className={`w-4 h-4 ${isGeneratingDeployZip ? 'animate-bounce' : ''}`} />
+                      {isGeneratingDeployZip ? 'Generating...' : 'Download Cloud Package'}
                     </button>
                   </div>
-                  
+
                   <div className="flex items-start justify-between border border-gray-200 rounded-lg p-4 hover:border-green-300 hover:bg-green-50/30 transition-colors">
                     <div className="space-y-1">
                       <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
@@ -477,6 +867,25 @@ SET IDENTITY_INSERT Accounts OFF;
                     >
                       <Download className={`w-4 h-4 ${isGeneratingZip ? 'animate-bounce' : ''}`} />
                       {isGeneratingZip ? 'Generating ZIP...' : 'Download Source ZIP'}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-start justify-between border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                        <Database className="w-4 h-4 text-blue-600" />
+                        Complete Database Script & Data
+                      </h3>
+                      <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
+                        Downloads the complete SQL database script. Includes schema definitions (tables, relations), stored procedures, constraints, and current live data (Point-in-time) for direct restoration.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleDownloadSQL}
+                      className="shrink-0 flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download SQL Script
                     </button>
                   </div>
                 </div>
@@ -498,6 +907,112 @@ SET IDENTITY_INSERT Accounts OFF;
                      <p className="text-xs text-gray-500 pl-14">Next backup scheduled for: Today at 23:59 IST</p>
                    </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'cleanup' && (
+            <div className="space-y-6">
+              <div className="bg-red-50 border border-red-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-red-100 bg-red-100/50">
+                  <h2 className="text-lg font-semibold text-red-900">Data Cleanup Options</h2>
+                  <p className="text-xs text-red-700 mt-1">Warning: Actions performed here are permanent and cannot be undone.</p>
+                </div>
+                
+                {!isCleanupUnlocked ? (
+                  <div className="p-6">
+                    <div className="max-w-md mx-auto flex flex-col items-center justify-center p-8 border border-red-200 bg-white rounded-lg shadow-sm">
+                      <Shield className="w-12 h-12 text-red-500 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Restricted Access</h3>
+                      <p className="text-sm text-gray-500 text-center mb-6">Enter the cleanup password to access data deletion tools. This is a very crucial activity.</p>
+                      
+                      <div className="w-full flex gap-3">
+                        <input
+                          type="password"
+                          value={cleanupPasswordInput}
+                          onChange={(e) => setCleanupPasswordInput(e.target.value)}
+                          placeholder="Enter password..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (cleanupPasswordInput === 'Cleanup@2026') {
+                                setIsCleanupUnlocked(true);
+                              } else {
+                                alert('Incorrect password.');
+                              }
+                            }
+                          }}
+                          className="flex-1 rounded-md border-red-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-sm px-3 py-2 border"
+                        />
+                        <button
+                          onClick={() => {
+                            if (cleanupPasswordInput === 'Cleanup@2026') {
+                              setIsCleanupUnlocked(true);
+                            } else {
+                              alert('Incorrect password.');
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
+                        >
+                          Unlock
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                <div className="p-6 space-y-4">
+                  
+                  <div className="flex items-start justify-between border border-red-200 rounded-lg p-4 bg-white hover:border-red-300 transition-colors">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-red-900 flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-red-600" />
+                        1. Master Data Cleanup
+                      </h3>
+                      <p className="text-xs text-red-600 max-w-lg leading-relaxed">
+                        Cleans up all Master & Transaction data excluding Settings, Company Details, Financial details, and Account groups. Deletes records from accounts table except basic defaults ('Cash in Hand', 'Share Capital', 'Purchases', 'Sales'). Includes FPC Members, Vendors, Customers, Loans, Assets, etc.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Are you absolutely sure you want to delete all Master and Transaction Data? This action cannot be undone.")) {
+                            fetch('/api/cleanup/master', { method: 'POST' })
+                            .then(res => res.json())
+                            .then(() => alert('Master Data Cleanup Completed successfully.'))
+                            .catch(err => { console.error(err); alert('Cleanup failed.'); });
+                        }
+                      }}
+                      className="shrink-0 flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                    >
+                      Process Master Cleanup
+                    </button>
+                  </div>
+
+                  <div className="flex items-start justify-between border border-red-200 rounded-lg p-4 bg-white hover:border-red-300 transition-colors">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-red-900 flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-red-600" />
+                        2. Transaction Data Cleanup
+                      </h3>
+                      <p className="text-xs text-red-600 max-w-lg leading-relaxed">
+                        Cleans up only transactions data. Keeps all Master data tables, Settings, Company Details, Financial details, and Account groups intact.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Are you absolutely sure you want to delete all Transaction Data? This action cannot be undone.")) {
+                            fetch('/api/cleanup/transactions', { method: 'POST' })
+                            .then(res => res.json())
+                            .then(() => alert('Transaction Data Cleanup Completed successfully.'))
+                            .catch(err => { console.error(err); alert('Cleanup failed.'); });
+                        }
+                      }}
+                       className="shrink-0 flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                    >
+                      Process Transaction Cleanup
+                    </button>
+                  </div>
+
+                </div>
+                )}
               </div>
             </div>
           )}

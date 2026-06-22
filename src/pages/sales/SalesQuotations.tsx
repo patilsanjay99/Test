@@ -1,31 +1,66 @@
 import { exportToCSV } from '../../lib/utils';
-import React from 'react';
-import { Plus, Search, Edit2, Trash2, Download, Eye, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Edit2, Trash2, Download, Eye, FileText, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const quotations = [
-  { id: 'QT-2024-001', date: '01/03/2024', customer: 'Ramesh Patel', amount: 45000, status: 'Accepted' },
-  { id: 'QT-2024-002', date: '05/03/2024', customer: 'Agro Retailers', amount: 125000, status: 'Draft' },
-  { id: 'QT-2024-003', date: '10/03/2024', customer: 'Suresh Kumar', amount: 32000, status: 'Sent' },
-];
+import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 
 export function SalesQuotations() {
+  const { hasPermission } = useAuth();
+  const { activeCompany } = useAppContext();
   const navigate = useNavigate();
+  const [quotations, setQuotations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeCompany?.id) {
+       fetch(`/api/data/SalesQuotations?CompanyId=${activeCompany.id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Fetch customer details to map name/place
+                fetch(`/api/data/Customers?CompanyId=${activeCompany.id}`)
+                .then(res => res.json())
+                .then(customers => {
+                   const mappedData = data.map(qt => {
+                       const customer = Array.isArray(customers) ? customers.find(c => c.Id === qt.CustomerId) : null;
+                       return {
+                           ...qt,
+                           CustomerName: customer?.CustomerName || 'Unknown',
+                           CustomerPlace: customer?.Place || '-'
+                       };
+                   });
+                   setQuotations(mappedData);
+                })
+                .catch(() => setQuotations(data));
+            } else {
+                setQuotations([]);
+            }
+        })
+        .catch(console.error);
+    }
+  }, [activeCompany?.id]);
+
+  const deleteQuotation = async (id: string) => {
+    if (confirm('Are you sure you want to delete this quotation?')) {
+      await fetch(`/api/data/SalesQuotations/${id}`, { method: 'DELETE' });
+      setQuotations(quotations.filter(q => q.Id !== id));
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Quotations</h1>
           <p className="text-sm text-gray-500 mt-1">Manage estimates and quotes before converting to orders.</p>
         </div>
-        <button 
+        {hasPermission('/sales/quotations', 'add') && ( <button 
           onClick={() => navigate('/sales/quotations/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Create Quotation
-        </button>
+        </button> )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
@@ -35,7 +70,7 @@ export function SalesQuotations() {
             <input 
               type="text" 
               placeholder="Search quotations..." 
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-white"
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-[#f4fbf4]"
             />
           </div>
           <div className="flex gap-2">
@@ -55,6 +90,7 @@ export function SalesQuotations() {
                 <th className="font-medium p-4 border-b border-gray-200">Quote No</th>
                 <th className="font-medium p-4 border-b border-gray-200">Date</th>
                 <th className="font-medium p-4 border-b border-gray-200">Customer</th>
+                <th className="font-medium p-4 border-b border-gray-200">Place</th>
                 <th className="font-medium p-4 border-b border-gray-200 text-right">Amount (₹)</th>
                 <th className="font-medium p-4 border-b border-gray-200">Status</th>
                 <th className="font-medium p-4 border-b border-gray-200 text-right">Actions</th>
@@ -62,33 +98,44 @@ export function SalesQuotations() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {quotations.map((qt) => (
-                <tr key={qt.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4 text-sm font-medium text-blue-600">{qt.id}</td>
-                  <td className="p-4 text-sm text-gray-600">{qt.date}</td>
-                  <td className="p-4 text-sm text-gray-900 font-medium">{qt.customer}</td>
-                  <td className="p-4 text-sm text-gray-900 font-mono text-right">{qt.amount.toLocaleString('en-IN')}</td>
+                <tr key={qt.Id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4 text-sm font-medium text-blue-600">{qt.QuotationNumber}</td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {qt.QuotationDate ? (
+                      qt.QuotationDate.includes('-') 
+                        ? qt.QuotationDate.split('-').reverse().join('/') 
+                        : qt.QuotationDate
+                    ) : '-'}
+                  </td>
+                  <td className="p-4 text-sm text-gray-900 font-medium">{qt.CustomerName || '-'}</td>
+                  <td className="p-4 text-sm text-gray-600">{qt.CustomerPlace || '-'}</td>
+                  <td className="p-4 text-sm text-gray-900 font-mono text-right">{parseFloat(qt.TotalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                   <td className="p-4 text-sm">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      qt.status === 'Accepted' ? 'bg-green-100 text-green-700' : 
-                      qt.status === 'Sent' ? 'bg-blue-100 text-blue-700' : 
+                      qt.Status === 'Accepted' ? 'bg-green-100 text-green-700' : 
+                      qt.Status === 'Sent' ? 'bg-blue-100 text-blue-700' : 
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {qt.status}
+                      {qt.Status}
                     </span>
                   </td>
-                  <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="p-4 flex items-center justify-end gap-3 transition-opacity">
                     <button className="text-gray-400 hover:text-green-600 transition-colors" title="Convert to Order">
                       <FileText className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="View PDF">
-                      <Eye className="w-4 h-4" />
+                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="View PDF" onClick={() => navigate(`/sales/quotations/${qt.Id}/print`)}>
+                      <Printer className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button className="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {hasPermission('/sales', 'edit') && (
+                      <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit" onClick={() => navigate(`/sales/quotations/${qt.Id}`)}>
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      )}
+                    {hasPermission('/sales', 'delete') && (
+                      <button className="text-gray-400 hover:text-red-600 transition-colors" title="Delete" onClick={() => deleteQuotation(qt.Id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      )}
                   </td>
                 </tr>
               ))}
@@ -96,12 +143,7 @@ export function SalesQuotations() {
           </table>
         </div>
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-sm text-gray-500">
-          Showing 1 to 3 of 3 entries
-          <div className="flex gap-1">
-            <button className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-300 cursor-not-allowed" disabled>Prev</button>
-            <button className="px-3 py-1 border border-gray-300 rounded bg-blue-50 text-blue-600 font-medium border-blue-200">1</button>
-            <button className="px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 cursor-not-allowed" disabled>Next</button>
-          </div>
+          Showing {quotations.length} entries
         </div>
       </div>
     </div>

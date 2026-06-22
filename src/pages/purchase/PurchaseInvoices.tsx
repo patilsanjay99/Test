@@ -1,31 +1,63 @@
-import { exportToCSV } from '../../lib/utils';
-import React from 'react';
-import { Plus, Search, Edit2, Trash2, Download, Eye } from 'lucide-react';
+import { exportToCSV, formatDate } from '../../lib/utils';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Edit2, Trash2, Download, Eye, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const invoices = [
-  { id: 'PI-2024-001', date: '01/03/2024', vendor: 'Agri Seeds Ltd', amount: 85000, status: 'Paid' },
-  { id: 'PI-2024-002', date: '05/03/2024', vendor: 'FarmTech Solutions', amount: 155000, status: 'Pending' },
-  { id: 'PI-2024-003', date: '10/03/2024', vendor: 'Global Fertilizers', amount: 42000, status: 'Overdue' },
-];
+import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 
 export function PurchaseInvoices() {
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
+  const { activeCompany } = useAppContext();
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (activeCompany) {
+      fetchInvoices();
+    }
+  }, [activeCompany?.id]);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const [invRes, vendRes] = await Promise.all([
+        fetch(`/api/v1/data/PurchaseInvoices?CompanyId=${activeCompany?.id || ''}`),
+        fetch(`/api/v1/data/Vendors?CompanyId=${activeCompany?.id || ''}`)
+      ]);
+      const data = await invRes.json();
+      const vendData = await vendRes.json();
+      setInvoices(Array.isArray(data) ? data : []);
+      setVendors(Array.isArray(vendData) ? vendData : []);
+    } catch (e) {
+      console.error("Error fetching purchase invoices", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    if (window.confirm("Are you sure you want to delete this invoice?")) {
+      await fetch(`/api/v1/data/PurchaseInvoices/${id}`, { method: 'DELETE' });
+      fetchInvoices();
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col h-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Purchase Invoices</h1>
           <p className="text-sm text-gray-500 mt-1">Book vendor bills and manage accounts payable.</p>
         </div>
-        <button 
+        {hasPermission('/purchase/invoices', 'add') && ( <button 
           onClick={() => navigate('/purchase/invoices/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Book Invoice
-        </button>
+        </button> )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
@@ -35,7 +67,7 @@ export function PurchaseInvoices() {
             <input 
               type="text" 
               placeholder="Search vendor invoices..." 
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-white"
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-[#f4fbf4]"
             />
           </div>
           <div className="flex gap-2">
@@ -54,51 +86,51 @@ export function PurchaseInvoices() {
               <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                 <th className="font-medium p-4 border-b border-gray-200">Invoice No</th>
                 <th className="font-medium p-4 border-b border-gray-200">Date</th>
-                <th className="font-medium p-4 border-b border-gray-200">Vendor</th>
+                <th className="font-medium p-4 border-b border-gray-200">Vendor Name</th>
+                <th className="font-medium p-4 border-b border-gray-200">Place</th>
                 <th className="font-medium p-4 border-b border-gray-200 text-right">Amount (₹)</th>
-                <th className="font-medium p-4 border-b border-gray-200">Status</th>
                 <th className="font-medium p-4 border-b border-gray-200 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4 text-sm font-medium text-blue-600">{inv.id}</td>
-                  <td className="p-4 text-sm text-gray-600">{inv.date}</td>
-                  <td className="p-4 text-sm text-gray-900 font-medium">{inv.vendor}</td>
-                  <td className="p-4 text-sm text-gray-900 font-mono text-right">{inv.amount.toLocaleString('en-IN')}</td>
-                  <td className="p-4 text-sm">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 
-                      inv.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="View PDF">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button className="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan={6} className="p-4 text-center">Loading...</td></tr>
+              ) : invoices.length === 0 ? (
+                <tr><td colSpan={6} className="p-4 text-center">No invoices found</td></tr>
+              ) : invoices.map((inv) => {
+                const invId = inv.Id || inv.id || inv.ID;
+                const date = formatDate(inv.InvoiceDate || inv.Date);
+                const vendor = vendors.find(v => String(v.Id || v.id || v.Vendor_ID) === String(inv.VendorId));
+                const vendorName = vendor ? (vendor.VendorName || vendor.Vendor_NAME || vendor.Name) : (inv.VendorName || inv.Vendor_NAME || inv.vendor);
+                const vendorPlace = vendor ? (vendor.City || vendor.CITY || vendor.BillingCity || '-') : '-';
+                const amt = parseFloat(inv.TotalAmount || inv.amount || 0);
+
+                return (
+                  <tr key={invId} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4 text-sm font-medium text-blue-600">{inv.InvoiceNumber || inv.id}</td>
+                    <td className="p-4 text-sm text-gray-600">{date}</td>
+                    <td className="p-4 text-sm text-gray-900 font-medium">{vendorName}</td>
+                    <td className="p-4 text-sm text-gray-600">{vendorPlace}</td>
+                    <td className="p-4 text-sm text-gray-900 font-mono text-right">{amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => navigate(`/sales/invoices/${invId}/print?type=purchase`)} className="text-gray-400 hover:text-blue-600 transition-colors" title="Print Invoice">
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      {hasPermission('/purchase/invoices', 'edit') && ( <button onClick={() => navigate(`/purchase/invoices/${invId}`)} className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
+                        <Edit2 className="w-4 h-4" />
+                      </button> )}
+                      {hasPermission('/purchase/invoices', 'delete') && ( <button onClick={() => handleDelete(invId)} className="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button> )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-sm text-gray-500">
-          Showing 1 to 3 of 3 entries
-          <div className="flex gap-1">
-            <button className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-300 cursor-not-allowed" disabled>Prev</button>
-            <button className="px-3 py-1 border border-gray-300 rounded bg-blue-50 text-blue-600 font-medium border-blue-200">1</button>
-            <button className="px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 cursor-not-allowed" disabled>Next</button>
-          </div>
+          Showing {invoices.length} entries
         </div>
       </div>
     </div>

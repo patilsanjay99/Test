@@ -1,10 +1,12 @@
 import React from 'react';
-import { Bell, Search, Menu, Globe } from 'lucide-react';
+import { LogOut, Bell, Search, Menu, Globe } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function Header() {
-  const { user, activeCompany, companies, setActiveCompany, activeFinancialYear, setActiveFinancialYear, financialYears } = useAppContext();
+  const { activeCompany, companies, setActiveCompany, activeFinancialYear, setActiveFinancialYear, financialYears } = useAppContext();
+  const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
 
   return (
@@ -19,26 +21,14 @@ export function Header() {
           <input 
             type="text" 
             placeholder={t('header.search')} 
-            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white w-64 lg:w-96 transition-all"
+            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-[#f4fbf4] w-48 lg:w-64 transition-all"
           />
         </div>
       </div>
       
       <div className="flex items-center gap-4">
         <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
-          <Globe className="w-4 h-4 text-gray-400" />
-          <select 
-            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as 'en' | 'mr' | 'hi')}
-          >
-            <option value="en">English</option>
-            <option value="mr">मराठी</option>
-            <option value="hi">हिंदी</option>
-          </select>
-        </div>
-        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
-          <span className="text-sm text-gray-500">Active Company:</span>
+          <span className="text-sm text-gray-500">Company:</span>
           <select 
             className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
             value={activeCompany?.id || ''}
@@ -52,6 +42,7 @@ export function Header() {
             ))}
           </select>
         </div>
+        
         <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
           <span className="text-sm text-gray-500">FY:</span>
           <select 
@@ -67,16 +58,35 @@ export function Header() {
             ))}
           </select>
         </div>
+
+        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
+          <Globe className="w-4 h-4 text-gray-400" />
+          <select 
+            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as 'en' | 'mr' | 'hi')}
+          >
+            <option value="en">English</option>
+            <option value="mr">मराठी</option>
+            <option value="hi">हिंदी</option>
+          </select>
+        </div>
         
         {user && (
-          <div className="hidden md:flex items-center gap-3 border-r border-gray-200 pr-4 mr-2">
+          <div className="hidden md:flex items-center gap-3 pr-2">
             <div className="text-right">
-               <div className="text-sm font-medium text-gray-900">{user.name}</div>
-               <div className="text-xs text-gray-500">{user.role}</div>
+               <div className="text-sm font-medium text-gray-900">{user.Name || user.name}</div>
             </div>
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm tracking-tight border border-blue-200">
-              {user.name.charAt(0)}
+              {(user.Name || user.name || 'U').charAt(0).toUpperCase()}
             </div>
+            <button 
+                onClick={logout}
+                className="ml-2 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                title="Log out"
+            >
+                <LogOut className="w-4 h-4" />
+            </button>
           </div>
         )}
 

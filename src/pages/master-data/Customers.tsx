@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useAppContext } from '../../context/AppContext';
 
 export function Customers() {
+  const { hasPermission } = useAuth();
   const [customers, setCustomers] = useState<any[]>([]);
   const navigate = useNavigate();
   const { activeCompany } = useAppContext();
 
   useEffect(() => {
-    fetch(`/api/v1/data/Customers?CompanyId=${activeCompany?.id || ''}`)
+    fetch(`/api/data/Customers?CompanyId=${activeCompany?.id || ''}`)
       .then(res => res.json())
       .then(data => setCustomers(Array.isArray(data) ? data : []))
       .catch(console.error);
@@ -17,8 +19,17 @@ export function Customers() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this customer?')) {
-      await fetch(`/api/v1/data/Customers/${id}`, { method: 'DELETE' });
-      setCustomers(customers.filter(c => c.Id !== id));
+      try {
+        const res = await fetch(`/api/data/Customers/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setCustomers(customers.filter(c => (c.Id || c.id || c.ID || '').toString() !== id.toString()));
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || 'Failed to delete record.');
+        }
+      } catch (err: any) {
+        alert(err.message);
+      }
     }
   };
 
@@ -29,13 +40,13 @@ export function Customers() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Customer Master</h1>
           <p className="text-sm text-gray-500 mt-1">Manage customer details and master records.</p>
         </div>
-        <button 
+        {hasPermission('/master/customers', 'add') && ( <button 
           onClick={() => navigate('/master/customers/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Add Customer
-        </button>
+        </button> )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
@@ -45,7 +56,7 @@ export function Customers() {
             <input 
               type="text" 
               placeholder="Search customers..." 
-              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              className="w-full pl-9 pr-4 py-2 bg-[#f4fbf4] border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
             />
           </div>
         </div>
@@ -77,12 +88,20 @@ export function Customers() {
                   <td className="px-6 py-4 text-gray-600 font-mono text-xs">{c.GSTINNo || '-'}</td>
                   <td className="px-6 py-4 text-right font-mono font-medium">₹{c.OpeningBalance?.toLocaleString() || '0'}</td>
                   <td className="px-6 py-4 text-center space-x-2">
-                    <button className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50">
+                    {hasPermission('/master/customers', 'edit') && ( <button 
+                      onClick={() => navigate(`/master/customers/${c.Id || c.id || c.ID}`)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50"
+                      title="Edit"
+                    >
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(c.Id)} className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-md hover:bg-red-50">
+                    </button> )}
+                    {hasPermission('/master/customers', 'delete') && ( <button 
+                      onClick={() => handleDelete((c.Id || c.id || c.ID || '').toString())} 
+                      className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-md hover:bg-red-50"
+                      title="Delete"
+                    >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button> )}
                   </td>
                 </tr>
               ))}

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
 export function CustomerForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { activeCompany } = useAppContext();
   const [formData, setFormData] = useState({
     CustomerName: '',
@@ -22,174 +23,515 @@ export function CustomerForm() {
     TANNo: '',
     PANNo: '',
     CINNo: '',
-    Commissionrate: 0,
-    AccountingCircle: ''
+    Commissionrate: '',
+    AccountingCircle: '',
+    BusinessDetails: '',
+    Place: ''
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      setLoading(true);
+      fetch(`/api/v1/data/Customers/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          const sanitizedData: any = {};
+          for (const key in data) {
+            sanitizedData[key] = data[key] === null ? '' : data[key];
+          }
+          setFormData(prev => ({
+            ...prev,
+            ...sanitizedData
+          }));
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.CustomerName) return alert("Customer name is required.");
+    if (!formData.CustomerName) return alert("Customer Name is required.");
     try {
       setSaving(true);
-      await fetch('/api/v1/data/Customers', {
-        method: 'POST',
+      
+      const queryParam = activeCompany?.id ? `?CompanyId=${activeCompany.id}` : '';
+      const existingRes = await fetch(`/api/v1/data/Customers${queryParam}`);
+      if (existingRes.ok) {
+          const existing = await existingRes.json();
+          const duplicate = existing.find((item: any) => 
+               item.CustomerName?.trim().toLowerCase() === formData.CustomerName.trim().toLowerCase() && 
+               String(item.Id) !== String(id || '') && String(item.ID) !== String(id || '')
+          );
+          if (duplicate) {
+              alert("Customer Name already exists. Please choose a different name.");
+              setSaving(false);
+              return;
+          }
+      }
+
+      const url = id ? `/api/v1/data/Customers/${id}` : '/api/v1/data/Customers';
+      const method = id ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, CompanyId: activeCompany?.id || null })
       });
+      if (!response.ok) {
+        let errText = await response.text();
+        try { errText = JSON.parse(errText).error || errText; } catch(e) {}
+        throw new Error(errText);
+      }
       navigate('/master/customers');
-    } catch(err) {
-      alert("Failed to save customer");
+    } catch(err: any) {
+      alert(`Error saving: ${err.message}`);
     } finally {
       setSaving(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.type === 'number' ? Number(e.target.value) : e.target.value
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value
     }));
   };
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col space-y-6 pb-12">
+    <div className="max-w-full mx-auto px-4 lg:px-8 w-full flex flex-col space-y-6 pb-12">
+      {/* Top action bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => navigate('/master/customers')}
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600"
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add New Customer</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            {id ? 'Edit Customer Details' : 'Add New Customer'}
+          </h1>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-          <div className="col-span-full pb-2 mb-2 border-b border-gray-100 flex items-center justify-between">
-             <h2 className="text-base font-semibold text-gray-900 bg-green-600/10 text-green-700 px-3 py-1 rounded w-fit">Customer Master</h2>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Customer Name *</label>
-            <input required type="text" name="CustomerName" value={formData.CustomerName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Registration No.</label>
-            <input type="text" name="RegistrationNo" value={formData.RegistrationNo} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Address</label>
-            <textarea name="Address" value={formData.Address} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50 h-[84px] resize-none"></textarea>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Opening Balance</label>
-            <input type="number" name="OpeningBalance" value={formData.OpeningBalance || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-
-          <div className="col-span-full pt-4 pb-2 mb-2 border-y border-gray-100">
-             <h2 className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded">Business Details</h2>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Contact Person</label>
-            <input type="text" name="ContactPerson" value={formData.ContactPerson} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Phone No.</label>
-            <input type="text" name="PhoneNo" value={formData.PhoneNo} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">E-mail ID</label>
-            <input type="email" name="EmailID" value={formData.EmailID} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-full pt-4 pb-2 mb-2 border-y border-gray-100">
-             <h2 className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded">Business Zone Details</h2>
-          </div>
-
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">State Code</label>
-            <input type="text" name="StateCode" value={formData.StateCode} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Range</label>
-            <input type="text" name="Range" value={formData.Range} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Division</label>
-            <input type="text" name="Division" value={formData.Division} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Commissionrate</label>
-            <input type="number" name="Commissionrate" value={formData.Commissionrate || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Accounting Circle</label>
-            <input type="text" name="AccountingCircle" value={formData.AccountingCircle} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-
-          <div className="col-span-full pt-4 pb-2 mb-2 border-y border-gray-100">
-             <h2 className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded">Tax Identification Details</h2>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">GSTIN No.</label>
-            <input type="text" name="GSTINNo" value={formData.GSTINNo} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-          </div>
-
-          <div className="col-span-1 space-y-1.5 grid grid-cols-2 gap-4">
-             <div>
-               <label className="text-sm font-medium text-gray-700">Aadhar Card No.</label>
-               <input type="text" name="AadharCardNo" value={formData.AadharCardNo} onChange={handleChange} className="w-full mt-1.5 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-             </div>
-             <div>
-               <label className="text-sm font-medium text-gray-700">PAN No.</label>
-               <input type="text" name="PANNo" value={formData.PANNo} onChange={handleChange} className="w-full mt-1.5 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-             </div>
-          </div>
-          
-          <div className="col-span-1 space-y-1.5 grid grid-cols-2 gap-4">
-             <div>
-                <label className="text-sm font-medium text-gray-700">TAN No.</label>
-                <input type="text" name="TANNo" value={formData.TANNo} onChange={handleChange} className="w-full mt-1.5 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-             </div>
-             <div>
-                <label className="text-sm font-medium text-gray-700">CIN No.</label>
-                <input type="text" name="CINNo" value={formData.CINNo} onChange={handleChange} className="w-full mt-1.5 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50" />
-             </div>
-          </div>
+      {loading && (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center text-gray-500 shadow-sm animate-pulse">
+          Loading customer information...
         </div>
+      )}
 
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-          <button 
-            type="button"
-            onClick={() => navigate('/master/customers')}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100 text-gray-700 bg-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit"
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Save Customer'}
-          </button>
-        </div>
-      </form>
+      {!loading && (
+        <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden transition-all duration-300">
+          
+          {/* Main Title Header Banner with elegant emerald gradient */}
+          <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-800 text-white py-4 px-6 text-center font-bold text-lg tracking-wider uppercase shadow-md flex items-center justify-center gap-2 select-none">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Customer Master File
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          </div>
+ 
+          {/* Form Master Grid Box */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
+            
+            {/* LEFT COLUMN */}
+            <div className="flex flex-col">
+              
+              {/* Row 1: Customer Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Customer Name <span className="text-red-500 ml-1">*</span>
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    required 
+                    type="text" 
+                    name="CustomerName" 
+                    value={formData.CustomerName} 
+                    onChange={handleChange} 
+                    placeholder="Enter full customer or firm name"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 1.1: Place */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Place
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="Place" 
+                    value={formData.Place} 
+                    onChange={handleChange} 
+                    placeholder="E.g., City, Town or Region"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 2: Address */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[72px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Address
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <textarea 
+                    name="Address" 
+                    value={formData.Address} 
+                    onChange={handleChange} 
+                    rows={2}
+                    placeholder="Enter office or billing address"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all resize-none placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 3: Business Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 lg:border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Business Details
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="BusinessDetails" 
+                    value={formData.BusinessDetails} 
+                    onChange={handleChange} 
+                    placeholder="Nature of principal business activity"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+            </div>
+ 
+            {/* RIGHT COLUMN */}
+            <div className="flex flex-col">
+              
+              {/* Row 1: Registration No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Registration No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="RegistrationNo" 
+                    maxLength={20}
+                    value={formData.RegistrationNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter Registration No."
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-wide text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 2: Opening Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Opening Balance
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <div className="relative flex items-center w-full max-w-[280px]">
+                    <span className="absolute left-3 text-slate-500 font-bold text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      name="OpeningBalance" 
+                      value={formData.OpeningBalance || ''} 
+                      onChange={handleChange} 
+                      placeholder="0.00"
+                      className="w-full pl-7 pr-3 bg-[#fcfcfc] border border-slate-300 rounded-md py-1.5 text-sm font-mono font-bold text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Contact Person */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Contact Person
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="ContactPerson" 
+                    value={formData.ContactPerson} 
+                    onChange={handleChange} 
+                    placeholder="Enter name of representative"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4.5: Phone No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Phone No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="PhoneNo" 
+                    maxLength={15}
+                    value={formData.PhoneNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter contact phone number"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 5: Email ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 lg:border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  E-mail ID
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="email" 
+                    name="EmailID" 
+                    value={formData.EmailID} 
+                    onChange={handleChange} 
+                    placeholder="e.g. billing@company.com"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+            </div>
+ 
+          </div>
+
+          {/* Tax & Business Zone Details Grid Box - Ensures perfect horizontal alignment of banners and fields */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200 border-t border-slate-200">
+            
+            {/* LEFT COLUMN - TAX DETAILS */}
+            <div className="flex flex-col">
+              
+              {/* Row 6: Tax Identification Details HEADER BANNER */}
+              <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 text-white py-2.5 px-5 font-bold text-xs tracking-wider uppercase border-b border-slate-100 text-left select-none flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></span>
+                Tax Identification Details
+              </div>
+ 
+              {/* Row 7: GSTIN No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  GSTIN No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="GSTINNo" 
+                    maxLength={15}
+                    value={formData.GSTINNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter GSTIN"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-wider text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all uppercase placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 8: Aadhar Card No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Aadhar Card No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="AadharCardNo" 
+                    maxLength={12}
+                    value={formData.AadharCardNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter Aadhar Card No."
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-widest text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 8.5: PAN No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  PAN No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="PANNo" 
+                    maxLength={10}
+                    value={formData.PANNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter PAN No."
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-wide text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all uppercase placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 9: TAN No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  TAN No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="TANNo" 
+                    maxLength={20}
+                    value={formData.TANNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter TAN No."
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-wide text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all uppercase placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+              {/* Row 9.5: CIN No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  CIN No.
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="CINNo" 
+                    maxLength={21}
+                    value={formData.CINNo} 
+                    onChange={handleChange} 
+                    placeholder="Enter CIN"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold tracking-wide text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all uppercase placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+            </div>
+ 
+            {/* RIGHT COLUMN - BUSINESS ZONE DETAILS */}
+            <div className="flex flex-col">
+ 
+              {/* Row 4: Business Zone Details HEADER BANNER */}
+              <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 text-white py-2.5 px-5 font-bold text-xs tracking-wider uppercase border-b border-slate-100 text-left select-none flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></span>
+                Business Zone Details
+              </div>
+              {/* Row 5: State Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  State Code
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="StateCode" 
+                    value={formData.StateCode} 
+                    onChange={handleChange} 
+                    placeholder="2-digit State Reference"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+  
+              {/* Row 6: Range */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Range
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="Range" 
+                    value={formData.Range} 
+                    onChange={handleChange} 
+                    placeholder="Enter tax jurisdiction range"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+  
+              {/* Row 7: Division */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Division
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="Division" 
+                    value={formData.Division} 
+                    onChange={handleChange} 
+                    placeholder="E.g., Dev-I or Dev-II"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+  
+              {/* Row 8: Commissionerate */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Commissionerate
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="Commissionrate" 
+                    maxLength={30}
+                    value={formData.Commissionrate} 
+                    onChange={handleChange} 
+                    placeholder="Enter Commissionerate"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+  
+              {/* Row 9: Accounting Circle */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 sm:border-b-0 min-h-[52px] items-stretch">
+                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                  Accounting Circle
+                </div>
+                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                  <input 
+                    type="text" 
+                    name="AccountingCircle" 
+                    value={formData.AccountingCircle} 
+                    onChange={handleChange} 
+                    placeholder="Corporate accounting unit code"
+                    className="w-full max-w-[280px] bg-[#fcfcfc] border border-slate-300 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all placeholder-slate-400"
+                  />
+                </div>
+              </div>
+ 
+            </div>
+ 
+          </div>
+ 
+          {/* Action buttons at footer */}
+          <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-end gap-3 select-none">
+            <button 
+              type="button"
+              onClick={() => navigate('/master/customers')}
+              className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-sm font-bold transition-all duration-150 active:scale-95 shadow-sm"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              disabled={saving}
+              className="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-150 active:scale-95 shadow-md"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save Customer Master'}
+            </button>
+          </div>
+ 
+        </form>
+      )}
     </div>
   );
 }

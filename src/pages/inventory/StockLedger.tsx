@@ -1,101 +1,304 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Download, Package, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
 import { exportToCSV } from '../../lib/utils';
-import React, { useState } from 'react';
-import { Search, Download, Package, ArrowUpRight, ArrowDownRight, History } from 'lucide-react';
-
-const mockLedger = [
-  { itemCode: 'ITM-001', itemName: 'Premium Wheat Seeds', category: 'Seeds', uom: 'kg', openingStock: 200, inward: 400, outward: 100, closingStock: 500 },
-  { itemCode: 'ITM-002', itemName: 'Urea Fertilizer 50kg', category: 'Fertilizers', uom: 'Bag', openingStock: 50, inward: 250, outward: 100, closingStock: 200 },
-  { itemCode: 'ITM-003', itemName: 'Pesticide XYZ 1L', category: 'Pesticides', uom: 'Ltr', openingStock: 20, inward: 50, outward: 20, closingStock: 50 },
-];
+import { useAppContext } from '../../context/AppContext';
+import { formatDate } from '../../utils/dateFormatter';
+import { CustomDatePicker } from '../../components/CustomDatePicker';
 
 export function StockLedger() {
-  const [ledger] = useState(mockLedger);
+  const { activeCompany } = useAppContext();
+  const [items, setItems] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [salesReturns, setSalesReturns] = useState<any[]>([]);
+  const [purchaseReturns, setPurchaseReturns] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+
+  const [stockItemId, setStockItemId] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('2026-04-01');
+  const [toDate, setToDate] = useState<string>('2026-06-30');
+
+  useEffect(() => {
+    const compId = activeCompany?.id || '';
+    Promise.all([
+      fetch(`/api/v1/data/InventoryItems?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/SalesInvoices?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/PurchaseInvoices?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/SalesReturns?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/PurchaseReturns?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/Customers?CompanyId=${compId}`).then(r => r.json()),
+      fetch(`/api/v1/data/Vendors?CompanyId=${compId}`).then(r => r.json())
+    ]).then(([inv, sls, pur, srets, prets, custs, vnds]) => {
+      setItems(Array.isArray(inv) ? inv : []);
+      setSales(Array.isArray(sls) ? sls : []);
+      setPurchases(Array.isArray(pur) ? pur : []);
+      setSalesReturns(Array.isArray(srets) ? srets : []);
+      setPurchaseReturns(Array.isArray(prets) ? prets : []);
+      setCustomers(Array.isArray(custs) ? custs : []);
+      setVendors(Array.isArray(vnds) ? vnds : []);
+    }).catch(console.error);
+  }, [activeCompany?.id]);
+
+  const computedStockLedger = useMemo(() => {
+    if (!stockItemId) return { ledgerRows: [], openingQty: 0, closingQty: 0 };
+    
+    const item = items.find(i => String(i.Id || i.id || i.ItemCode) === String(stockItemId));
+    const openingQty = item ? (parseFloat(item.Quantity || 0) || 0) : 0;
+    
+    const txns: any[] = [];
+    
+    purchases.forEach(inv => {
+      if (inv.Status === 'Draft' || inv.Status === 'Cancelled') return;
+      const pDate = inv.InvoiceDate || inv.Date || '';
+      if (!pDate) return;
+      let itms: any[] = [];
+      try { itms = JSON.parse(inv.ItemsData || '[]'); } catch(e) {}
+      const itemTxns = itms.filter((itm: any) => String(itm.ItemId || itm.itemId) === String(stockItemId));
+      itemTxns.forEach(itemTxn => {
+        const vend = vendors.find(v => String(v.Vendor_ID || v.Id || v.id) === String(inv.VendorId));
+        const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : (inv.VendorName || 'Unknown');
+        const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
+        txns.push({
+          Date: pDate.substring(0, 10),
+          VoucherType: 'Purchase',
+          VoucherNo: inv.InvoiceNumber,
+          PartyName: pName,
+          PartyPlace: pPlace,
+          Inward: parseFloat(itemTxn.qty || itemTxn.Quantity) || 0,
+          Outward: 0,
+          Rate: parseFloat(itemTxn.rate || itemTxn.Rate || itemTxn.Price) || 0
+        });
+      });
+    });
+
+    sales.forEach(inv => {
+      if (inv.Status === 'Draft' || inv.Status === 'Cancelled') return;
+      const sDate = inv.InvoiceDate || inv.Invoicedate || '';
+      if (!sDate) return;
+      let itms: any[] = [];
+      try { itms = JSON.parse(inv.ItemsData || '[]'); } catch(e) {}
+      const itemTxns = itms.filter((itm: any) => String(itm.ItemId || itm.itemId) === String(stockItemId));
+      itemTxns.forEach(itemTxn => {
+        const cust = customers.find(c => String(c.Id || c.id) === String(inv.CustomerId));
+        const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
+        const pPlace = cust ? (cust.Place || cust.Address || '') : '';
+        txns.push({
+          Date: sDate.substring(0, 10),
+          VoucherType: 'Sales',
+          VoucherNo: inv.InvoiceNumber,
+          PartyName: pName,
+          PartyPlace: pPlace,
+          Inward: 0,
+          Outward: parseFloat(itemTxn.qty || itemTxn.Quantity) || 0,
+          Rate: parseFloat(itemTxn.rate || itemTxn.Rate || itemTxn.Price) || 0
+        });
+      });
+    });
+
+    salesReturns.forEach(ret => {
+      if (ret.Status === 'Draft' || ret.Status === 'Cancelled') return;
+      const rDate = ret.ReturnDate || ret.returndate || '';
+      if (!rDate) return;
+      let itms: any[] = [];
+      try { itms = JSON.parse(ret.ItemsData || '[]'); } catch(e) {}
+      const itemTxns = itms.filter((itm: any) => String(itm.ItemId || itm.itemId) === String(stockItemId));
+      itemTxns.forEach(itemTxn => {
+        const cust = customers.find(c => String(c.Id || c.id) === String(ret.CustomerId));
+        const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
+        const pPlace = cust ? (cust.Place || cust.Address || '') : '';
+        txns.push({
+          Date: rDate.substring(0, 10),
+          VoucherType: 'Sales Return',
+          VoucherNo: ret.ReturnNumber || `SR-${ret.Id || ret.id}`,
+          PartyName: pName,
+          PartyPlace: pPlace,
+          Inward: parseFloat(itemTxn.qty || itemTxn.Quantity) || 0,
+          Outward: 0,
+          Rate: parseFloat(itemTxn.rate || itemTxn.Rate || itemTxn.Price) || 0
+        });
+      });
+    });
+
+    purchaseReturns.forEach(ret => {
+      if (ret.Status === 'Draft' || ret.Status === 'Cancelled') return;
+      const rDate = ret.ReturnDate || ret.returndate || '';
+      if (!rDate) return;
+      let itms: any[] = [];
+      try { itms = JSON.parse(ret.ItemsData || '[]'); } catch(e) {}
+      const itemTxns = itms.filter((itm: any) => String(itm.ItemId || itm.itemId) === String(stockItemId));
+      itemTxns.forEach(itemTxn => {
+        const vend = vendors.find(v => String(v.Vendor_ID || v.Id || v.id) === String(ret.VendorId));
+        const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : 'Unknown';
+        const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
+        txns.push({
+          Date: rDate.substring(0, 10),
+          VoucherType: 'Purchase Return',
+          VoucherNo: ret.ReturnNumber || `PR-${ret.Id || ret.id}`,
+          PartyName: pName,
+          PartyPlace: pPlace,
+          Inward: 0,
+          Outward: parseFloat(itemTxn.qty || itemTxn.Quantity) || 0,
+          Rate: parseFloat(itemTxn.rate || itemTxn.Rate || itemTxn.Price) || 0
+        });
+      });
+    });
+
+    txns.sort((a, b) => a.Date.localeCompare(b.Date));
+
+    let runQty = openingQty;
+    const ledgerRows = [];
+    
+    // We can also filter txns by date range!
+    // But we need to calculate adjusted opening qty based on transactions BEFORE fromDate
+    let adjOpeningQty = openingQty;
+    for (const txn of txns) {
+      if (txn.Date < fromDate) {
+        adjOpeningQty += txn.Inward - txn.Outward;
+      }
+    }
+
+    let runningInPeriod = adjOpeningQty;
+    for (const txn of txns) {
+      if (txn.Date >= fromDate && txn.Date <= toDate) {
+        runningInPeriod += txn.Inward - txn.Outward;
+        ledgerRows.push({ ...txn, BalanceQty: runningInPeriod });
+      }
+    }
+
+    return { 
+      ledgerRows, 
+      openingQty: adjOpeningQty, 
+      closingQty: runningInPeriod 
+    };
+
+  }, [stockItemId, fromDate, toDate, items, purchases, sales, salesReturns, purchaseReturns, customers, vendors]);
+
+  const outputCSV = () => {
+    if (!computedStockLedger) return;
+    const data = [
+      { Date: '', VoucherType: '', VoucherNo: '', PartyName: 'Opening Balance', Rate: '', Inward: '', Outward: '', BalanceQty: computedStockLedger.openingQty },
+      ...computedStockLedger.ledgerRows.map(r => ({
+        Date: formatDate(r.Date),
+        VoucherType: r.VoucherType,
+        VoucherNo: r.VoucherNo,
+        PartyName: r.PartyPlace ? `${r.PartyName} (${r.PartyPlace})` : r.PartyName,
+        Rate: r.Rate > 0 ? r.Rate : '',
+        Inward: r.Inward,
+        Outward: r.Outward,
+        BalanceQty: r.BalanceQty
+      })),
+      { Date: '', VoucherType: '', VoucherNo: '', PartyName: 'Closing Balance', Rate: '', Inward: '', Outward: '', BalanceQty: computedStockLedger.closingQty }
+    ];
+    exportToCSV(data, 'StockLedger');
+  };
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Stock Ledger</h1>
-          <p className="text-sm text-gray-500 mt-1">Real-time inventory balances and stock summaries.</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Stock Ledger</h1>
+        <button
+          onClick={outputCSV}
+          disabled={!stockItemId || computedStockLedger.ledgerRows.length === 0}
+          className="bg-white border border-gray-200 text-gray-700 px-4 py-2 flex items-center gap-2 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search by item code or name..." 
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-80 bg-white"
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-0">
+        <div className="p-4 border-b border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Select Item</label>
+            <select
+              className="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              value={stockItemId}
+              onChange={(e) => setStockItemId(e.target.value)}
+            >
+              <option value="">-- Select Item --</option>
+              {items.map((i: any) => (
+                <option key={i.Id || i.id} value={i.Id || i.id}>
+                  {i.Name || i.ItemCode} ({i.Category})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+            <CustomDatePicker
+              value={fromDate}
+              onChange={setFromDate}
+              className="w-full"
             />
           </div>
-          <div className="flex gap-2">
-            <select className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option value="">All Categories</option>
-              <option value="Seeds">Seeds</option>
-              <option value="Fertilizers">Fertilizers</option>
-              <option value="Pesticides">Pesticides</option>
-            </select>
-            <button
-              onClick={() => exportToCSV(ledger, 'StockLedger')}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700 transition-colors bg-white flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" /> Export Report
-            </button>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+            <CustomDatePicker
+              value={toDate}
+              onChange={setToDate}
+              className="w-full"
+            />
           </div>
         </div>
-        
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                <th className="font-medium p-4 border-b border-gray-200">Item Details</th>
-                <th className="font-medium p-4 border-b border-gray-200 text-right">Opening Stock</th>
-                <th className="font-medium p-4 border-b border-gray-200 text-right text-green-600">Inward <ArrowDownRight className="w-3 h-3 inline" /></th>
-                <th className="font-medium p-4 border-b border-gray-200 text-right text-red-600">Outward <ArrowUpRight className="w-3 h-3 inline" /></th>
-                <th className="font-medium p-4 border-b border-gray-200 text-right text-blue-600">Closing Stock</th>
-                <th className="font-medium p-4 border-b border-gray-200 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {ledger.map((item) => (
-                <tr key={item.itemCode} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-                        <Package className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{item.itemName}</div>
-                        <div className="text-xs text-gray-500 font-mono">{item.itemCode} • {item.category}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-gray-600 text-right font-mono">
-                    {item.openingStock} <span className="text-gray-400 font-sans text-xs">{item.uom}</span>
-                  </td>
-                  <td className="p-4 text-sm font-medium text-green-600 text-right font-mono">
-                    +{item.inward} <span className="text-green-400 font-sans text-xs">{item.uom}</span>
-                  </td>
-                  <td className="p-4 text-sm font-medium text-red-600 text-right font-mono">
-                    -{item.outward} <span className="text-red-400 font-sans text-xs">{item.uom}</span>
-                  </td>
-                  <td className="p-4 text-sm font-bold text-blue-700 text-right font-mono">
-                    {item.closingStock} <span className="text-blue-500 font-sans text-xs font-normal">{item.uom}</span>
-                  </td>
-                  <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors flex items-center gap-1 text-xs font-medium" title="View Transaction History">
-                      <History className="w-4 h-4" /> History
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-sm text-gray-500">
-          Showing 1 to {ledger.length} of {ledger.length} items
+
+        <div className="flex-1 overflow-auto p-4">
+          {!stockItemId ? (
+             <div className="text-center text-gray-500 py-12">Please select an item to view its ledger.</div>
+          ) : (
+            <div className="overflow-hidden rounded-lg shadow ring-1 ring-black ring-opacity-5">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Voucher No</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Party</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Rate</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Inward</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Outward</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  <tr className="bg-blue-50 text-blue-800 font-medium font-mono text-sm">
+                    <td className="px-4 py-3">{formatDate(fromDate)}</td>
+                    <td colSpan={3} className="px-4 py-3 italic">Opening Balance (B/F)</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right">{computedStockLedger.openingQty}</td>
+                  </tr>
+                  
+                  {computedStockLedger.ledgerRows.length === 0 ? (
+                    <tr><td colSpan={8} className="p-8 text-center text-gray-400">No transactions in this period.</td></tr>
+                  ) : (
+                     computedStockLedger.ledgerRows.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50 text-sm font-mono text-gray-600">
+                        <td className="px-4 py-3">{formatDate(r.Date)}</td>
+                        <td className="px-4 py-3 font-sans text-xs">{r.VoucherType}</td>
+                        <td className="px-4 py-3 text-blue-600">{r.VoucherNo}</td>
+                        <td className="px-4 py-3 font-sans">{r.PartyName || '-'}{r.PartyPlace ? ` (${r.PartyPlace})` : ''}</td>
+                        <td className="px-4 py-3 text-right">{r.Rate > 0 ? r.Rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}</td>
+                        <td className="px-4 py-3 text-right text-green-600">{r.Inward > 0 ? r.Inward : '—'}</td>
+                        <td className="px-4 py-3 text-right text-red-600">{r.Outward > 0 ? r.Outward : '—'}</td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">{r.BalanceQty}</td>
+                      </tr>
+                    ))
+                  )}
+
+                  <tr className="bg-gray-100 font-bold border-t-2 border-gray-300 text-sm font-mono text-gray-800">
+                    <td className="px-4 py-3">{formatDate(toDate)}</td>
+                    <td colSpan={3} className="px-4 py-3 italic">Closing Balance (C/F)</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right">{computedStockLedger.ledgerRows.reduce((a, b) => a + b.Inward, 0)}</td>
+                    <td className="px-4 py-3 text-right">{computedStockLedger.ledgerRows.reduce((a, b) => a + b.Outward, 0)}</td>
+                    <td className="px-4 py-3 text-right text-blue-700">{computedStockLedger.closingQty}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
