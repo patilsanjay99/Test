@@ -1646,16 +1646,50 @@ Please inspect and verify the following potential causes:
       }
 
       // 4. Create root server.js entrypoint for web control panels (cPanel Node.js Selector, Plesk, Phusion Passenger, PM2)
-      const rootServerJsContent = `// Root entrypoint for Cloud Hosting Panels (e.g. cPanel, Plesk, Phusion Passenger, Heroku, Render)
-// This file bootstrap-loads the compiled, ultra-optimized single-file Express server.
+      let rootServerJsContent = '';
+      if (fs.existsSync(path.join(process.cwd(), 'server.js'))) {
+        rootServerJsContent = fs.readFileSync(path.join(process.cwd(), 'server.js'), 'utf8');
+      } else {
+        rootServerJsContent = `// Root entrypoint for Cloud Hosting Panels (e.g. cPanel, Plesk, Phusion Passenger, Heroku, PM2, Render, IIS node)
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
 process.env.NODE_ENV = 'production';
 process.env.PORT = process.env.PORT || '3000';
-require('./dist/server.cjs');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+
+const compiledServerJs = path.join(__dirname, 'dist', 'server.js');
+const compiledServerCjs = path.join(__dirname, 'dist', 'server.cjs');
+
+if (fs.existsSync(compiledServerCjs)) {
+  console.log('🚀 Loading compiled production server (CJS) from:', compiledServerCjs);
+  require('./dist/server.cjs');
+} else if (fs.existsSync(compiledServerJs)) {
+  console.log('🚀 Loading compiled production server (ESM) from:', compiledServerJs);
+  import('./dist/server.js').catch(err => {
+    console.error('❌ Failed to dynamically import ./dist/server.js:', err);
+    process.exit(1);
+  });
+} else {
+  console.error('\\n❌ ERROR: Compiled server bundle not found at ./dist/server.js or ./dist/server.cjs');
+  console.error('👉 Did you forget to build the application first? Run: npm run build\\n');
+  process.exit(1);
+}
 `;
+      }
       zip.file('server.js', rootServerJsContent);
 
       // Create web.config entrypoint specifically for IIS/Plesk Windows Hosting
-      const webConfigContent = `<?xml version="1.0" encoding="utf-8"?>
+      let webConfigContent = '';
+      if (fs.existsSync(path.join(process.cwd(), 'web.config'))) {
+        webConfigContent = fs.readFileSync(path.join(process.cwd(), 'web.config'), 'utf8');
+      } else {
+        webConfigContent = `<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <system.webServer>
     <handlers>
@@ -1684,7 +1718,9 @@ require('./dist/server.cjs');
     <security>
       <requestFiltering>
         <hiddenSegments>
+          <remove segment="node_modules" />
           <add segment="node_modules" />
+          <remove segment="src" />
           <add segment="src" />
         </hiddenSegments>
       </requestFiltering>
@@ -1693,6 +1729,7 @@ require('./dist/server.cjs');
   </system.webServer>
 </configuration>
 `;
+      }
       zip.file('web.config', webConfigContent);
       
       // 5. Create README_DEPLOY.md with clean configuration and run guide
