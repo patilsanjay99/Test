@@ -523,6 +523,7 @@ addColumnIfNotExists('Vendors', 'FPCMemberId', 'INTEGER');
 
 // Add CompanyId to all standard tables
 addColumnIfNotExists('Users', 'CompanyId', 'INTEGER');
+addColumnIfNotExists('Users', 'Password', "TEXT DEFAULT 'welcome123'");
 addColumnIfNotExists('InventoryItems', 'CompanyId', 'INTEGER');
 addColumnIfNotExists('InventoryItems', 'Status', 'TEXT DEFAULT \'Active\'');
 addColumnIfNotExists('InventoryItems', 'Location', 'TEXT');

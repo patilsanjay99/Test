@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogOut, Bell, Search, Menu, Globe } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, Bell, Search, Menu, Globe, Key } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -17,6 +17,53 @@ export function Header() {
   } = useAppContext();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changing, setChanging] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      alert("New password and confirm password do not match");
+      return;
+    }
+    if (newPassword.length < 4) {
+      alert("Password must be at least 4 characters long");
+      return;
+    }
+    try {
+      setChanging(true);
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user?.Email || user?.email,
+          userId: user?.Id || user?.id,
+          currentPassword,
+          newPassword
+        })
+      });
+
+      if (res.ok) {
+        alert("Password updated successfully!");
+        setIsChangePasswordOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to update password");
+      }
+    } catch (err: any) {
+       console.error(err);
+       alert("Error changing password");
+    } finally {
+       setChanging(false);
+    }
+  };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shrink-0">
@@ -93,8 +140,15 @@ export function Header() {
               {(user.Name || user.name || 'U').charAt(0).toUpperCase()}
             </div>
             <button 
+                onClick={() => setIsChangePasswordOpen(true)}
+                className="ml-2 p-1.5 rounded-full hover:bg-gray-150 text-gray-500 hover:text-blue-600 transition-colors"
+                title="Change Password"
+            >
+                <Key className="w-4 h-4" />
+            </button>
+            <button 
                 onClick={logout}
-                className="ml-2 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                className="ml-1 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-red-600 transition-colors"
                 title="Log out"
             >
                 <LogOut className="w-4 h-4" />
@@ -107,6 +161,79 @@ export function Header() {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white"></span>
         </button>
       </div>
+
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-fade-in">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md overflow-hidden">
+            <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between">
+              <span className="font-bold tracking-wide uppercase text-sm">Change Access Password</span>
+              <button 
+                onClick={() => setIsChangePasswordOpen(false)}
+                className="text-white/80 hover:text-white text-xl font-bold focus:outline-none"
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 4 characters"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Retype new password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(false)}
+                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded border border-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={changing}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded font-bold uppercase tracking-wider"
+                >
+                  {changing ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

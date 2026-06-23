@@ -1534,10 +1534,13 @@ Please inspect and verify the following potential causes:
                   .query('SELECT * FROM Users WHERE Email = @email OR Name = @email'); // allowing name optionally
               
               if (result.recordset.length > 0) {
-                  // Wait, DB password isn't checked properly here, we just check if exists.
-                  // For real usage use bcrypt, but here simple text works as per instructions
-                  // Assuming Password doesn't exist for some so we bypass if it doesn't match for development
-                  res.json({ success: true, user: result.recordset[0] });
+                  const dbUser = result.recordset[0];
+                  const dbPassword = dbUser.Password || (dbUser.Email === 'admin@fpc.com' ? 'admin123' : 'welcome123');
+                  if (dbPassword === password) {
+                      res.json({ success: true, user: dbUser });
+                  } else {
+                      res.status(401).json({ error: "Invalid password" });
+                  }
               } else {
                   res.status(401).json({ error: "Invalid credentials" });
               }
@@ -1545,16 +1548,83 @@ Please inspect and verify the following potential causes:
               // SQLite
               const userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ?").get(email, email) as any;
               if (userRow) {
-                  res.json({ success: true, user: userRow });
+                  const dbPassword = userRow.Password || (userRow.Email === 'admin@fpc.com' ? 'admin123' : 'welcome123');
+                  if (dbPassword === password) {
+                      res.json({ success: true, user: userRow });
+                  } else {
+                      res.status(401).json({ error: "Invalid password" });
+                  }
               } else {
                   // Fallback superadmin creation in API
-                  if (email === 'admin@fpc.com') {
+                  if (email === 'admin@fpc.com' && password === 'admin123') {
                       res.json({ success: true, user: { Name: 'Super Admin', Role: 'Super Admin', Email: 'admin@fpc.com' }});
                   } else {
                       res.status(401).json({ error: "Invalid credentials" });
                   }
               }
           }
+      } catch (err: any) {
+          console.error(err);
+          res.status(500).json({ error: "Server error", message: err.message });
+      }
+  });
+
+  apiRouter.post("/auth/change-password", async (req, res) => {
+      try {
+          const { userId, email, currentPassword, newPassword } = req.body;
+          if (!email || !currentPassword || !newPassword) {
+              return res.status(400).json({ error: "Missing required fields" });
+          }
+          let userRow: any = null;
+          if (mssqlPool) {
+              const result = await mssqlPool.request()
+                  .input('email', sql.NVarChar, email)
+                  .query('SELECT * FROM Users WHERE Email = @email OR Name = @email');
+              if (result.recordset.length > 0) {
+                  userRow = result.recordset[0];
+              }
+          } else {
+              userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ?").get(email, email) as any;
+          }
+
+          if (!userRow) {
+              // Special case for default hardcoded Super Admin fallback if not in DB yet
+              if (email === 'admin@fpc.com') {
+                  userRow = { Id: 1, Name: 'Super Admin', Role: 'Super Admin', Email: 'admin@fpc.com', Password: 'admin123' };
+              } else {
+                  return res.status(401).json({ error: "User not found" });
+              }
+          }
+
+          const dbPassword = userRow.Password || (userRow.Email === 'admin@fpc.com' ? 'admin123' : 'welcome123');
+          if (dbPassword !== currentPassword) {
+              return res.status(401).json({ error: "Incorrect current password" });
+          }
+
+          if (mssqlPool) {
+              try {
+                  await mssqlPool.request()
+                      .input('password', sql.NVarChar, newPassword)
+                      .input('id', sql.Int, userRow.Id || userRow.ID || userRow.id || userId)
+                      .query('UPDATE Users SET Password = @password WHERE Id = @id');
+              } catch (alterErr: any) {
+                  await mssqlPool.request().query('ALTER TABLE Users ADD Password NVARCHAR(255) NULL');
+                  await mssqlPool.request()
+                      .input('password', sql.NVarChar, newPassword)
+                      .input('id', sql.Int, userRow.Id || userRow.ID || userRow.id || userId)
+                      .query('UPDATE Users SET Password = @password WHERE Id = @id');
+              }
+          } else {
+              try {
+                  sqliteDb.prepare("UPDATE Users SET Password = ? WHERE Id = ?").run(newPassword, userRow.Id);
+              } catch (e: any) {
+                  sqliteDb.prepare("INSERT OR REPLACE INTO Users (Id, Name, Email, Role, Status, Password) VALUES (?, ?, ?, ?, ?, ?)").run(
+                      userRow.Id || 1, userRow.Name, userRow.Email, userRow.Role, 'Active', newPassword
+                  );
+              }
+          }
+
+          res.json({ success: true, message: "Password updated successfully" });
       } catch (err: any) {
           console.error(err);
           res.status(500).json({ error: "Server error", message: err.message });
@@ -3274,6 +3344,11 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       console.log("DEBUG: Incoming data for table " + table + ":", JSON.stringify(data));
       console.log("DEBUG: CHECKING CONDITION:", table.toLowerCase() === 'salesquotations', !data.QuotationNumber);
       
+      if (table.toLowerCase() === 'users') {
+          if (!data.Password || !data.Password.trim()) {
+              data.Password = 'welcome123';
+          }
+      }
       if (table.toLowerCase() === 'cashpayments' && !data.VoucherNo) {
           try {
               const fyResult = await executeQuery("SELECT FinancialYear FROM FinancialYears WHERE Id = ?", [data.FinancialYearId]);

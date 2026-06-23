@@ -108,9 +108,7 @@ export function Login() {
               </button>
             </div>
             
-            <div className="mt-4 text-xs text-center text-gray-500">
-                <p>Super Admin: admin@fpc.com / admin123</p>
-            </div>
+
           </form>
         </div>
       </div>

@@ -220,6 +220,7 @@ CREATE TABLE Users (
     Phone NVARCHAR(50),
     Role NVARCHAR(50),
     Status NVARCHAR(50),
+    Password NVARCHAR(255) DEFAULT 'welcome123',
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 

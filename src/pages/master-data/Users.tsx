@@ -44,6 +44,33 @@ export function Users() {
     }
   };
 
+  const handleResetPassword = async (user: any) => {
+    const confirmReset = window.confirm(`Are you sure you want to reset the password for ${user.Name} to the default password ('welcome123')?`);
+    if (!confirmReset) return;
+
+    try {
+      const res = await fetch(`/api/v1/data/Users/${user.Id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...user,
+          Password: 'welcome123'
+        })
+      });
+
+      if (res.ok) {
+        alert(`Password for ${user.Name} has been reset to default 'welcome123' successfully.`);
+      } else {
+        alert("Failed to reset password.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error resetting password.");
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchRoles();
@@ -147,7 +174,11 @@ export function Users() {
                     {formatDate(user.CreatedAt)}
                   </td>
                   <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Reset Password">
+                    <button 
+                      onClick={() => handleResetPassword(user)}
+                      className="text-gray-400 hover:text-blue-600 transition-colors" 
+                      title="Reset Password"
+                    >
                       <Key className="w-4 h-4" />
                     </button>
                     {hasPermission('/master', 'edit') && (
