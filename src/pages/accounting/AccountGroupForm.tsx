@@ -105,12 +105,12 @@ export function AccountGroupForm() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50/50 flex items-center gap-3">
+      <div className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md overflow-hidden">
+        <div className="bg-[#0b8a1c] text-white py-3 px-4 border-b border-blue-900 text-center font-bold text-xl tracking-wide uppercase flex items-center justify-center gap-2">
           <div className="p-2 bg-blue-100 text-blue-700 rounded-md">
             <FolderTree className="w-5 h-5" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Group Details {isDefault && '(Default Group - Cannot Edit)'}</h2>
+          <h2 className="">Group Details {isDefault && '(Default Group - Cannot Edit)'}</h2>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2 col-span-2 md:col-span-1">
@@ -120,7 +120,7 @@ export function AccountGroupForm() {
               value={formData.GroupName}
               onChange={handleChange}
               disabled={isDefault}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-[#f4fbf4]"
+              className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
               placeholder="e.g. Current Assets"
             />
           </div>
@@ -131,7 +131,7 @@ export function AccountGroupForm() {
               value={formData.GroupType}
               onChange={handleChange}
               disabled={isDefault}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-[#f4fbf4]"
+              className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
             >
               <option value="Asset">Asset</option>
               <option value="Liability">Liability</option>

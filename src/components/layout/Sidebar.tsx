@@ -20,7 +20,8 @@ import {
   Upload,
   Shield,
   ClipboardList,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MenuItem } from '../../types';
@@ -148,6 +149,7 @@ export function Sidebar() {
     },
     { title: t('sidebar.reports'), path: '/reports', icon: FileText },
     { title: t('sidebar.settings'), path: '/settings', icon: Settings },
+    { title: 'User Manual', path: '/user-manual', icon: BookOpen },
   ];
 
   const toggleExpand = (title: string) => {

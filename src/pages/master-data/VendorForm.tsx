@@ -134,27 +134,27 @@ export function VendorForm() {
       )}
 
       {!loading && (
-        <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden transition-all duration-300">
+        <form onSubmit={handleSave} className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md overflow-hidden">
           
           {/* Main Title Header Banner with elegant emerald gradient */}
-          <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-800 text-white py-4 px-6 text-center font-bold text-lg tracking-wider uppercase shadow-md flex items-center justify-center gap-2 select-none">
+          <div className="bg-[#0b8a1c] text-white py-3 px-4 border-b border-blue-900 text-center font-bold text-xl tracking-wide uppercase flex items-center justify-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
             Vendor Master File
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
           </div>
  
           {/* Form Master Grid Box */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x-2 md:divide-[#8faad8]">
             
             {/* LEFT COLUMN */}
             <div className="flex flex-col">
               
               {/* Row 1: Vendor Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Vendor Name <span className="text-red-500 ml-1">*</span>
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     required 
                     type="text" 
@@ -168,11 +168,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 1.1: Place */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Place
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="Place" 
@@ -186,10 +186,10 @@ export function VendorForm() {
  
               {/* Row 2: Address */}
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[72px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Address
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <textarea 
                     name="Vendor_address" 
                     value={formData.Vendor_address} 
@@ -203,10 +203,10 @@ export function VendorForm() {
  
               {/* Row 3: Business Details */}
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 lg:border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Business Details
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="business_details" 
@@ -224,11 +224,11 @@ export function VendorForm() {
             <div className="flex flex-col">
               
               {/* Row 1: Registration No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Registration No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="registration_no" 
@@ -242,11 +242,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 2: Opening Balance */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Opening Balance
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <div className="relative flex items-center w-full max-w-[280px]">
                     <span className="absolute left-3 text-slate-500 font-bold text-sm">₹</span>
                     <input 
@@ -262,11 +262,11 @@ export function VendorForm() {
               </div>
 
               {/* Row 4: Contact Person */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Contact Person
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="contact_person" 
@@ -279,11 +279,11 @@ export function VendorForm() {
               </div>
 
               {/* Row 4.5: Phone No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Phone No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="phone_no" 
@@ -298,10 +298,10 @@ export function VendorForm() {
  
               {/* Row 5: Email ID */}
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 lg:border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   E-mail ID
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="email" 
                     name="email_id" 
@@ -330,11 +330,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 7: GSTIN No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   GSTIN No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="GSTIN" 
@@ -348,11 +348,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 8: Aadhar Card No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Aadhar Card No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="aadhar_no" 
@@ -366,11 +366,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 8.5: PAN No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   PAN No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="pan_no" 
@@ -384,11 +384,11 @@ export function VendorForm() {
               </div>
  
               {/* Row 9: TAN No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   TAN No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="tan_no" 
@@ -403,10 +403,10 @@ export function VendorForm() {
  
               {/* Row 9.5: CIN No */}
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b-0 border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   CIN No.
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="cin_no" 
@@ -430,11 +430,11 @@ export function VendorForm() {
                 Business Zone Details
               </div>
               {/* Row 5: State Code */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   State Code
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="state_code" 
@@ -447,11 +447,11 @@ export function VendorForm() {
               </div>
   
               {/* Row 6: Range */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Range
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="Range" 
@@ -464,11 +464,11 @@ export function VendorForm() {
               </div>
   
               {/* Row 7: Division */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Division
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="Division" 
@@ -481,11 +481,11 @@ export function VendorForm() {
               </div>
   
               {/* Row 8: Commissionerate */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Commissionerate
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="Commissionrate" 
@@ -500,10 +500,10 @@ export function VendorForm() {
   
               {/* Row 9: Accounting Circle */}
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-100 sm:border-b-0 min-h-[52px] items-stretch">
-                <div className="bg-slate-50/75 px-5 py-3.5 flex items-center font-bold text-[#334155] text-xs uppercase tracking-wider sm:col-span-1 border-r border-slate-100 select-none">
+                <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Accounting Circle
                 </div>
-                <div className="p-2 sm:col-span-2 flex items-center bg-white">
+                <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                   <input 
                     type="text" 
                     name="circle" 

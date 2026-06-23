@@ -128,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           else if (path.startsWith('/accounting') && path.includes('receipts')) key = 'Accounting: Cash Receipts';
           else if (path.startsWith('/reports')) key = 'MIS & Reports: MIS & Reports';
           else if (path.startsWith('/settings')) key = 'Settings: Settings';
+          else if (path.startsWith('/user-manual')) return true;
 
           if (key && rolePerms[key]) {
              if (action) {

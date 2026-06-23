@@ -191,7 +191,7 @@ export function BankPaymentForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md p-6 md:p-8 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block flex items-center gap-1">
@@ -211,7 +211,7 @@ export function BankPaymentForm() {
               disabled={!isEditMode}
               value={voucherNo}
               onChange={e => setVoucherNo(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed font-mono focus:outline-none"
+              className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm bg-gray-200 text-gray-500 cursor-not-allowed font-mono focus:outline-none"
             />
             {!isEditMode && (
               <span className="text-[10px] text-gray-400">

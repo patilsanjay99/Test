@@ -68,6 +68,7 @@ import { CashReceipts } from './pages/accounting/CashReceipts';
 import { CashReceiptForm } from './pages/accounting/CashReceiptForm';
 import { Reports } from './pages/reports/Reports';
 import { Settings } from './pages/settings/Settings';
+import { UserManual } from './pages/settings/UserManual';
 import { ETrackerDashboard } from './pages/e-tracker/ETrackerDashboard';
 import { IssuesList } from './pages/e-tracker/IssuesList';
 import { IssueForm } from './pages/e-tracker/IssueForm';
@@ -214,6 +215,7 @@ export default function App() {
               <Route path="statuses" element={<IssueStatusesList />} />
             </Route>
             <Route path="settings" element={<Settings />} />
+            <Route path="user-manual" element={<UserManual />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

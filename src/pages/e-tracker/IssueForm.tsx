@@ -397,7 +397,7 @@ export function IssueForm() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Form Fields */}
         <form onSubmit={handleSave} className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+          <div className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md p-6 space-y-6">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-2">Issue Registration Details</h2>
 
             {/* Title */}
@@ -408,7 +408,7 @@ export function IssueForm() {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
                 placeholder="Give a brief summary of the complaint or technical issue..."
               />
             </div>
@@ -419,7 +419,7 @@ export function IssueForm() {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32 transition-all outline-none resize-none"
+                className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] h-32 resize-none"
                 placeholder="Describe details of the problem, incident, workflow blockage, key requirements or context..."
               />
             </div>
@@ -432,7 +432,7 @@ export function IssueForm() {
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
                 >
                   {['Operations', 'Sales', 'Purchase', 'IT & Infrastructure', 'Accounting & Payroll', 'HR & Administration', 'Customer Support', 'FPC Logistics'].map(d => (
                     <option key={d} value={d}>{d}</option>
@@ -446,7 +446,7 @@ export function IssueForm() {
                 <select
                   value={assigneeId}
                   onChange={(e) => handleAssigneeChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
                 >
                   <option value="">-- Unassigned --</option>
                   {users.map(u => (
@@ -494,7 +494,7 @@ export function IssueForm() {
                   type="date"
                   value={slaDeadline}
                   onChange={(e) => setSlaDeadline(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
                 />
               </div>
 
