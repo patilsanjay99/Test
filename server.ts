@@ -348,6 +348,19 @@ async function ensureTableCreatedInMSSQL(tableName: string) {
                 ClosedAt NVARCHAR(50) NULL
             );
         END
+        ELSE
+        BEGIN
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'EscalatedCount') ALTER TABLE dbo.Issues ADD EscalatedCount INT DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'LastEscalationDate') ALTER TABLE dbo.Issues ADD LastEscalationDate NVARCHAR(50) NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'ClosedAt') ALTER TABLE dbo.Issues ADD ClosedAt NVARCHAR(50) NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'CreatedBy') ALTER TABLE dbo.Issues ADD CreatedBy NVARCHAR(255) NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'AttachmentUrl') ALTER TABLE dbo.Issues ADD AttachmentUrl NVARCHAR(MAX) NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'ApproverRemarks') ALTER TABLE dbo.Issues ADD ApproverRemarks NVARCHAR(MAX) NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'IsApproved') ALTER TABLE dbo.Issues ADD IsApproved INT DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'CompanyId') ALTER TABLE dbo.Issues ADD CompanyId INT NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'AssigneeId') ALTER TABLE dbo.Issues ADD AssigneeId INT NULL;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND name = 'StatusId') ALTER TABLE dbo.Issues ADD StatusId INT NULL;
+        END
       `);
       console.log("✅ Auto-recovery successful: Issues table created/upgraded.");
     } catch (err: any) {
@@ -375,6 +388,10 @@ async function ensureTableCreatedInMSSQL(tableName: string) {
         END
         ELSE
         BEGIN
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'CompanyId') ALTER TABLE dbo.IssueStatuses ADD CompanyId INT NULL DEFAULT 1;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsFinalStatus') ALTER TABLE dbo.IssueStatuses ADD IsFinalStatus INT DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsEditable') ALTER TABLE dbo.IssueStatuses ADD IsEditable INT DEFAULT 1;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsClosureStatus') ALTER TABLE dbo.IssueStatuses ADD IsClosureStatus INT DEFAULT 0;
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsReopenAllowed') ALTER TABLE dbo.IssueStatuses ADD IsReopenAllowed INT DEFAULT 0;
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'ActiveStatus') ALTER TABLE dbo.IssueStatuses ADD ActiveStatus INT DEFAULT 1;
         END
@@ -401,6 +418,11 @@ async function ensureTableCreatedInMSSQL(tableName: string) {
                 AttachmentUrl NVARCHAR(MAX) NULL,
                 CreatedAt DATETIME DEFAULT GETDATE()
             );
+        END
+        ELSE
+        BEGIN
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueLogs]') AND name = 'CompanyId') ALTER TABLE dbo.IssueLogs ADD CompanyId INT NULL DEFAULT 1;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueLogs]') AND name = 'AttachmentUrl') ALTER TABLE dbo.IssueLogs ADD AttachmentUrl NVARCHAR(MAX) NULL;
         END
       `);
       console.log("✅ Auto-recovery successful: IssueLogs table created/upgraded.");
@@ -3775,6 +3797,12 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
               await ensureTableCreatedInMSSQL("PurchaseReturns");
           } else if (tableLower === "bankaccounts") {
               await ensureTableCreatedInMSSQL("BankAccounts");
+          } else if (tableLower === "issuestatuses") {
+              await ensureTableCreatedInMSSQL("IssueStatuses");
+          } else if (tableLower === "issues") {
+              await ensureTableCreatedInMSSQL("Issues");
+          } else if (tableLower === "issuelogs") {
+              await ensureTableCreatedInMSSQL("IssueLogs");
           }
 
           while (attempt < maxAttempts && !success) {
@@ -3784,13 +3812,13 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
                   const colNames = [];
                   const paramNames = [];
                   for (let i = 0; i < keys.length; i++) {
-                      colNames.push(keys[i]);
+                      colNames.push(`[${keys[i]}]`);
                       paramNames.push(`@p${i}`);
                       
                       const normalizedVal = normalizeValueForBind(keys[i], values[i]);
                       request.input(`p${i}`, normalizedVal);
                   }
-                  const sqlQuery = `INSERT INTO [dbo].[${table}] (${colNames.join(', ')}) OUTPUT INSERTED.${pkCol} VALUES (${paramNames.join(', ')})`;
+                  const sqlQuery = `INSERT INTO [dbo].[${table}] (${colNames.join(', ')}) OUTPUT INSERTED.[${pkCol}] VALUES (${paramNames.join(', ')})`;
                   const result = await request.query(sqlQuery);
                   if (result.recordset && result.recordset.length > 0) {
                       const row = result.recordset[0];
@@ -3959,6 +3987,12 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
               await ensureTableCreatedInMSSQL("CashReceipts");
           } else if (tableLower === "bankaccounts") {
               await ensureTableCreatedInMSSQL("BankAccounts");
+          } else if (tableLower === "issuestatuses") {
+              await ensureTableCreatedInMSSQL("IssueStatuses");
+          } else if (tableLower === "issues") {
+              await ensureTableCreatedInMSSQL("Issues");
+          } else if (tableLower === "issuelogs") {
+              await ensureTableCreatedInMSSQL("IssueLogs");
           }
 
           while (attempt < maxAttempts && !success) {
@@ -3967,7 +4001,7 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
                   const request = mssqlPool.request();
                   const setClauses = [];
                   for (let i = 0; i < keys.length; i++) {
-                      setClauses.push(`${keys[i]} = @p${i}`);
+                      setClauses.push(`[${keys[i]}] = @p${i}`);
                       
                       const normalizedVal = normalizeValueForBind(keys[i], data[keys[i]]);
                       request.input(`p${i}`, normalizedVal);
@@ -3983,7 +4017,7 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
                   }
                   request.input('id', bindId);
                   
-                  const sqlQuery = `UPDATE [dbo].[${table}] SET ${setClauses.join(', ')} WHERE ${pkCol} = @id`;
+                  const sqlQuery = `UPDATE [dbo].[${table}] SET ${setClauses.join(', ')} WHERE [${pkCol}] = @id`;
                   await request.query(sqlQuery);
                   success = true;
                   await logAuditAction("System Admin", "UPDATE", table, typeof bindId_old === 'number' ? bindId_old : parseInt(id, 10) || 0, { old: oldRow, new: data }, data.FinancialYearId || oldRow?.FinancialYearId || null, data.CompanyId || oldRow?.CompanyId || null);
