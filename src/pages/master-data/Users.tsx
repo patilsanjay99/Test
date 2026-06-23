@@ -12,7 +12,7 @@ const mockUsers = [
 import { formatDate } from '../../utils/dateFormatter';
 
 export function Users() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: loggedInUser } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [systemRoles, setSystemRoles] = useState<any[]>([]);
@@ -174,13 +174,15 @@ export function Users() {
                     {formatDate(user.CreatedAt)}
                   </td>
                   <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => handleResetPassword(user)}
-                      className="text-gray-400 hover:text-blue-600 transition-colors" 
-                      title="Reset Password"
-                    >
-                      <Key className="w-4 h-4" />
-                    </button>
+                    {(loggedInUser?.Role === 'Super Admin' || loggedInUser?.role === 'Super Admin' || loggedInUser?.Role === 'Admin' || loggedInUser?.role === 'Admin') && (
+                      <button 
+                        onClick={() => handleResetPassword(user)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors" 
+                        title="Reset Password to Default"
+                      >
+                        <Key className="w-4 h-4" />
+                      </button>
+                    )}
                     {hasPermission('/master', 'edit') && (
                       <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit User">
                         <Edit2 className="w-4 h-4" />
