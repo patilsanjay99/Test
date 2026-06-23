@@ -53,7 +53,6 @@ export function Sidebar() {
   const { activeCompany, isMobileMenuOpen, setIsMobileMenuOpen } = useAppContext();
 
   const menuItems: MenuItem[] = [
-    { title: t('sidebar.settings'), path: '/settings', icon: Settings },
     { title: t('sidebar.dashboard'), path: '/', icon: LayoutDashboard },
     { 
       title: t('sidebar.masterData'), 
@@ -148,6 +147,7 @@ export function Sidebar() {
       ]
     },
     { title: t('sidebar.reports'), path: '/reports', icon: FileText },
+    { title: t('sidebar.settings'), path: '/settings', icon: Settings },
   ];
 
   const toggleExpand = (title: string) => {
