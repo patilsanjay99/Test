@@ -85,11 +85,11 @@ export function Header() {
         </div>
       </div>
       
-      <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2 shrink-0">
           <span className="text-sm text-gray-500">Company:</span>
           <select 
-            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
+            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer max-w-[140px] lg:max-w-[280px] truncate"
             value={activeCompany?.id || ''}
             onChange={(e) => {
               const comp = companies.find(c => c.id === e.target.value);
@@ -102,10 +102,10 @@ export function Header() {
           </select>
         </div>
         
-        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
+        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2 shrink-0">
           <span className="text-sm text-gray-500">FY:</span>
           <select 
-            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
+            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer max-w-[120px] truncate"
             value={activeFinancialYear?.id || ''}
             onChange={(e) => {
               const fy = financialYears.find(f => f.id === e.target.value);
@@ -118,10 +118,10 @@ export function Header() {
           </select>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2">
+        <div className="hidden md:flex items-center gap-2 border-r border-gray-200 pr-4 mr-2 shrink-0">
           <Globe className="w-4 h-4 text-gray-400" />
           <select 
-            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer"
+            className="text-sm font-medium border-0 bg-transparent focus:ring-0 cursor-pointer max-w-[100px] truncate"
             value={language}
             onChange={(e) => setLanguage(e.target.value as 'en' | 'mr' | 'hi')}
           >
@@ -132,9 +132,9 @@ export function Header() {
         </div>
         
         {user && (
-          <div className="flex items-center gap-1.5 sm:gap-3 pr-2 border-r border-gray-200">
-            <div className="text-right hidden sm:block">
-               <div className="text-sm font-medium text-gray-900">{user.Name || user.name}</div>
+          <div className="flex items-center gap-1.5 sm:gap-3 pr-2 border-r border-gray-200 shrink-0">
+            <div className="text-right hidden sm:block max-w-[110px] lg:max-w-[150px] truncate">
+               <div className="text-sm font-medium text-gray-900 truncate">{user.Name || user.name}</div>
             </div>
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm tracking-tight border border-blue-200 shrink-0">
               {(user.Name || user.name || 'U').charAt(0).toUpperCase()}
@@ -156,7 +156,7 @@ export function Header() {
           </div>
         )}
 
-        <button className="relative p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors">
+        <button className="relative p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors shrink-0">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white"></span>
         </button>
