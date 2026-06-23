@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Shield, MoreVertical, Key } from 'lucide-react';
+import { Plus, Search, Edit2, Shield, Key, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -68,6 +68,25 @@ export function Users() {
     } catch (e) {
       console.error(e);
       alert("Error resetting password.");
+    }
+  };
+
+  const handleDelete = async (userId: any) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this user?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/v1/data/Users/${userId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setUsers(users.filter(u => u.Id !== userId && u.id !== userId));
+      } else {
+        alert("Failed to delete user.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error deleting user.");
     }
   };
 
@@ -183,14 +202,24 @@ export function Users() {
                         <Key className="w-4 h-4" />
                       </button>
                     )}
-                    {hasPermission('/master', 'edit') && (
-                      <button className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit User">
+                    {hasPermission('/master/users', 'edit') && (
+                      <button 
+                        onClick={() => navigate(`/master/users/${user.Id || user.id}`)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors" 
+                        title="Edit User"
+                      >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      )}
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    )}
+                    {hasPermission('/master/users', 'delete') && (
+                      <button 
+                        onClick={() => handleDelete(user.Id || user.id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors" 
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

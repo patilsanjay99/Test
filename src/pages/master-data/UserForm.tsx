@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Save, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export function UserForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = !!id;
   const [formData, setFormData] = useState({
     Name: '',
     Email: '',
@@ -22,14 +24,37 @@ export function UserForm() {
         if (res.ok) {
           const roles = await res.json();
           setAvailableRoles(roles);
-          if (roles.length > 0 && !roles.find((r: any) => r.RoleName === formData.Role)) {
+          if (roles.length > 0 && !id && !roles.find((r: any) => r.RoleName === formData.Role)) {
             setFormData(prev => ({ ...prev, Role: roles[0].RoleName }));
           }
         }
       } catch(e) {}
     };
     fetchRoles();
-  }, []);
+  }, [id]);
+
+  React.useEffect(() => {
+    if (id) {
+      const fetchUser = async () => {
+        try {
+          const res = await fetch(`/api/v1/data/Users/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setFormData({
+              Name: data.Name || '',
+              Email: data.Email || '',
+              Phone: data.Phone || '',
+              Role: data.Role || 'Employee',
+              Status: data.Status || 'Active'
+            });
+          }
+        } catch (e) {
+          console.error("Error loading user:", e);
+        }
+      };
+      fetchUser();
+    }
+  }, [id]);
 
   const handleSave = async () => {
     if (!formData.Name) return alert('Name is required');
@@ -41,19 +66,27 @@ export function UserForm() {
           const duplicate = existing.find((item: any) => 
                item.Name?.trim().toLowerCase() === formData.Name.trim().toLowerCase()
           );
-          if (duplicate) {
+          if (duplicate && String(duplicate.Id) !== id) {
               alert("User Name already exists. Please choose a different name.");
               setSaving(false);
               return;
           }
       }
 
-      await fetch('/api/v1/data/Users', {
-        method: 'POST',
+      const url = isEdit ? `/api/v1/data/Users/${id}` : '/api/v1/data/Users';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      navigate('/master/users');
+
+      if (res.ok) {
+        navigate('/master/users');
+      } else {
+        alert('Error saving user');
+      }
     } catch(e) {
       alert('Error saving user');
     } finally {
@@ -82,7 +115,7 @@ export function UserForm() {
       <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-md overflow-hidden">
         {/* Green Title Header */}
         <div className="bg-[#0b8a1c] text-white py-3 px-4 border-b border-blue-900 text-center font-bold text-xl tracking-wide uppercase">
-          CREATE USER MASTER
+          {isEdit ? 'UPDATE USER MASTER' : 'CREATE USER MASTER'}
         </div>
 
         {/* Form Master Grid Box */}
@@ -199,7 +232,7 @@ export function UserForm() {
             className="bg-[#0b8a1c] hover:bg-[#097016] text-white px-5 py-2 rounded font-bold border border-blue-900 flex items-center gap-2 transition-colors uppercase text-sm disabled:opacity-50 shadow-sm"
           >
             <Save className="w-4 h-4" />
-            {saving ? 'SAVING...' : 'SAVE USER'}
+            {saving ? 'SAVING...' : (isEdit ? 'UPDATE USER' : 'SAVE USER')}
           </button>
         </div>
       </form>

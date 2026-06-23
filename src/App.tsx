@@ -121,6 +121,7 @@ export default function App() {
               <Route path="financial-years/new" element={<FinancialYearForm />} />
               <Route path="users" element={<Users />} />
               <Route path="users/new" element={<UserForm />} />
+              <Route path="users/:id" element={<UserForm />} />
               <Route path="system-roles" element={<SystemRoles />} />
               <Route path="bank-account-types" element={<BankAccountTypes />} />
               <Route path="items" element={<Items />} />
