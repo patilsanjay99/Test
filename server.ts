@@ -3171,11 +3171,12 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
 
   apiRouter.post("/cleanup/transactions", async (req, res) => {
     try {
+      // Clean up transactional data but preserve configuration and state master data (IssueStatuses is explicitly excluded)
       const trxTables = [
         'audit_logs', 'ShareTransactions', 'LoanRepayments', 'JournalLines', 'JournalEntries',
         'CashReceipts', 'CashPayments', 'BankReceipts', 'BankPayments', 'SalesReturns',
         'SalesInvoices', 'SalesOrders', 'SalesQuotations', 'PurchaseReturns', 'PurchaseInvoices',
-        'PurchaseOrders', 'StockAdjustments'
+        'PurchaseOrders', 'StockAdjustments', 'Issues', 'IssueLogs'
       ];
       for (const table of trxTables) {
         try { await executeQuery(`DELETE FROM ${table}`); } catch(e) { console.error('Error cleaning '+table, e); }
@@ -3189,16 +3190,18 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
 
   apiRouter.post("/cleanup/master", async (req, res) => {
     try {
+      // Clean up transactional data (IssueStatuses is explicitly excluded)
       const trxTables = [
         'audit_logs', 'ShareTransactions', 'LoanRepayments', 'JournalLines', 'JournalEntries',
         'CashReceipts', 'CashPayments', 'BankReceipts', 'BankPayments', 'SalesReturns',
         'SalesInvoices', 'SalesOrders', 'SalesQuotations', 'PurchaseReturns', 'PurchaseInvoices',
-        'PurchaseOrders', 'StockAdjustments'
+        'PurchaseOrders', 'StockAdjustments', 'Issues', 'IssueLogs'
       ];
       for (const table of trxTables) {
         try { await executeQuery(`DELETE FROM ${table}`); } catch(e) { console.error('Error cleaning '+table, e); }
       }
       
+      // Clean up standard master tables (preserving IssueStatuses configuration)
       const masterTables = [
         'Customers', 'Locations', 'Vendors', 'FPCMembers', 'Loans', 'Assets', 'InventoryItems', 'BankAccounts'
       ];
@@ -3839,6 +3842,11 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       const data = req.body;
       console.log(`[PUT /data/${table}/${id}] keys len: ${Object.keys(data).length}, LogoUrl starts with: `, data.LogoUrl ? data.LogoUrl.substring(0, 15) : undefined);
       const pkCol = getPrimaryKeyColumn(table);
+      const syncTables = new Set([
+        'customers', 'vendors', 'fpcmembers', 'bankaccounts',
+        'purchaseinvoices', 'salesinvoices', 'salesreturns', 'purchasereturns',
+        'cashpayments', 'cashreceipts', 'bankpayments', 'bankreceipts'
+      ]);
       const keys = Object.keys(data).filter(k => {
           const lower = k.toLowerCase();
           return lower !== 'id' && lower !== pkCol.toLowerCase() && lower !== 'createdat' && lower !== 'added_on';
@@ -3904,6 +3912,7 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
                   success = true;
                   await logAuditAction("System Admin", "UPDATE", table, typeof bindId_old === 'number' ? bindId_old : parseInt(id, 10) || 0, { old: oldRow, new: data }, data.FinancialYearId || oldRow?.FinancialYearId || null, data.CompanyId || oldRow?.CompanyId || null);
                   res.json({ success: true });
+                  if (!syncTables.has(tableLower)) return;
               } catch (err: any) {
                   lastError = err;
                   const errMsg = err.message || "";
@@ -3940,10 +3949,11 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
           try {
               const setClauses = keys.map(k => `${k} = ?`).join(', ');
               const values = keys.map(k => data[k]);
-              values.push(id);
+              values.push(bindId_old);
               sqliteDb.prepare(`UPDATE ${table} SET ${setClauses} WHERE ${pkCol} = ?`).run(...values);
               await logAuditAction("System Admin", "UPDATE", table, typeof bindId_old === 'number' ? bindId_old : parseInt(id, 10) || 0, { old: oldRow, new: data }, data.FinancialYearId || oldRow?.FinancialYearId || null, data.CompanyId || oldRow?.CompanyId || null);
               res.json({ success: true });
+              if (!syncTables.has(table.toLowerCase())) return;
           } catch(e) {
               console.error("Sqlite update error", e);
               throw e;
@@ -3952,7 +3962,7 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
 
       let fullRow = { ...data };
       try {
-          const rowsRes = await executeQuery(`SELECT * FROM ${table} WHERE ${pkCol} = ?`, [id]);
+          const rowsRes = await executeQuery(`SELECT * FROM ${table} WHERE ${pkCol} = ?`, [bindId_old]);
           if (rowsRes && rowsRes.length > 0) fullRow = { ...rowsRes[0], ...data };
       } catch (e) {
           console.error("Error fetching full row for sync", e);
@@ -4203,8 +4213,14 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
               }
           }
       } else {
-         sqliteDb.prepare(`DELETE FROM ${table} WHERE ${pkCol} = ?`).run(id);
-         await logAuditAction("System Admin", "DELETE", table, parseInt(id, 10) || 0, record, record?.FinancialYearId || null, record?.CompanyId || null);
+         let bindId: any = id;
+         const pkColLower = pkCol.toLowerCase();
+         if (pkColLower === 'id' || pkColLower === 'vendor_id') {
+             const parsedId = parseInt(id, 10);
+             if (!isNaN(parsedId)) bindId = parsedId;
+         }
+         sqliteDb.prepare(`DELETE FROM ${table} WHERE ${pkCol} = ?`).run(bindId);
+         await logAuditAction("System Admin", "DELETE", table, typeof bindId === 'number' ? bindId : parseInt(id, 10) || 0, record, record?.FinancialYearId || null, record?.CompanyId || null);
          res.json({ success: true });
       }
     } catch (e: any) {

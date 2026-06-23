@@ -741,7 +741,17 @@ CREATE TABLE IF NOT EXISTS IssueStatuses (
     IsReopenAllowed INTEGER DEFAULT 0,
     ActiveStatus INTEGER DEFAULT 1
 );
+`);
 
+// Migrate existing sqlite tables if they are missing newer columns
+try {
+    db.exec(`ALTER TABLE IssueStatuses ADD COLUMN IsReopenAllowed INTEGER DEFAULT 0`);
+} catch (e) {}
+try {
+    db.exec(`ALTER TABLE IssueStatuses ADD COLUMN ActiveStatus INTEGER DEFAULT 1`);
+} catch (e) {}
+
+db.exec(`
 CREATE TABLE IF NOT EXISTS Issues (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     CompanyId INTEGER DEFAULT 1,

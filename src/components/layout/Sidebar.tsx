@@ -269,28 +269,28 @@ export function Sidebar() {
           </nav>
         </div>
         
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center justify-between font-medium text-sm px-3 py-1 gap-2">
-             <div className="flex items-center gap-3 truncate">
-               <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
-                 {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
-               </div>
-               <div className="truncate">
-                 <div className="text-white truncate">{user?.Name || user?.name}</div>
-                 <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
-               </div>
-             </div>
-             <button 
-                 onClick={() => {
-                   setIsMobileMenuOpen(false);
-                   logout();
-                 }}
-                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 hover:text-red-400 text-slate-400 flex items-center justify-center transition-colors shrink-0"
-                 title="Log out"
-             >
-                 <LogOut className="w-4 h-4" />
-             </button>
+        <div className="p-4 border-t border-slate-800 space-y-3 bg-slate-950/30">
+          <div className="flex items-center gap-3 px-3 py-1">
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0 font-bold border border-slate-600">
+              {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="truncate flex-1">
+              <div className="text-white font-medium text-sm truncate">{user?.Name || user?.name}</div>
+              <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
+            </div>
           </div>
+          <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                logout();
+              }}
+              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-red-950/40 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-900/30 hover:border-red-900/60 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer"
+              title="Log out"
+              id="btn-sidebar-logout"
+          >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+          </button>
         </div>
       </div>
     </>
