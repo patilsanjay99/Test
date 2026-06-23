@@ -373,6 +373,11 @@ async function ensureTableCreatedInMSSQL(tableName: string) {
                 ActiveStatus INT DEFAULT 1
             );
         END
+        ELSE
+        BEGIN
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsReopenAllowed') ALTER TABLE dbo.IssueStatuses ADD IsReopenAllowed INT DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'ActiveStatus') ALTER TABLE dbo.IssueStatuses ADD ActiveStatus INT DEFAULT 1;
+        END
       `);
       console.log("✅ Auto-recovery successful: IssueStatuses table created/upgraded.");
     } catch (err: any) {
@@ -1430,6 +1435,77 @@ async function startServer() {
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[CashPayments]') AND name = 'Amount') ALTER TABLE dbo.CashPayments ADD Amount DECIMAL(18,2) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[CashPayments]') AND name = 'Narration') ALTER TABLE dbo.CashPayments ADD Narration NVARCHAR(MAX) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[CashPayments]') AND name = 'Status') ALTER TABLE dbo.CashPayments ADD Status NVARCHAR(50) NULL;
+          END
+
+          -- IssueStatuses Table
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.IssueStatuses (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL DEFAULT 1,
+                  StatusName NVARCHAR(100) NOT NULL,
+                  StatusCode NVARCHAR(50) NOT NULL,
+                  SequenceOrder INT NOT NULL,
+                  Color NVARCHAR(20) NULL,
+                  IsFinalStatus INT DEFAULT 0,
+                  IsEditable INT DEFAULT 1,
+                  IsClosureStatus INT DEFAULT 0,
+                  IsReopenAllowed INT DEFAULT 0,
+                  ActiveStatus INT DEFAULT 1
+              );
+          END
+          ELSE
+          BEGIN
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'CompanyId') ALTER TABLE dbo.IssueStatuses ADD CompanyId INT NULL DEFAULT 1;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsFinalStatus') ALTER TABLE dbo.IssueStatuses ADD IsFinalStatus INT DEFAULT 0;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsEditable') ALTER TABLE dbo.IssueStatuses ADD IsEditable INT DEFAULT 1;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsClosureStatus') ALTER TABLE dbo.IssueStatuses ADD IsClosureStatus INT DEFAULT 0;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'IsReopenAllowed') ALTER TABLE dbo.IssueStatuses ADD IsReopenAllowed INT DEFAULT 0;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[IssueStatuses]') AND name = 'ActiveStatus') ALTER TABLE dbo.IssueStatuses ADD ActiveStatus INT DEFAULT 1;
+          END
+
+          -- Issues Table
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Issues]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.Issues (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL,
+                  Title NVARCHAR(255) NOT NULL,
+                  Description NVARCHAR(MAX) NULL,
+                  Department NVARCHAR(100) NULL,
+                  AssigneeId INT NULL,
+                  AssigneeName NVARCHAR(255) NULL,
+                  StatusId INT NULL,
+                  StatusCode NVARCHAR(50) NULL,
+                  StatusName NVARCHAR(100) NULL,
+                  Priority NVARCHAR(50) NULL,
+                  SlaDeadline NVARCHAR(50) NULL,
+                  EscalatedCount INT DEFAULT 0,
+                  LastEscalationDate NVARCHAR(50) NULL,
+                  CreatedBy NVARCHAR(255) NULL,
+                  AttachmentUrl NVARCHAR(MAX) NULL,
+                  ApproverRemarks NVARCHAR(MAX) NULL,
+                  IsApproved INT DEFAULT 0,
+                  CreatedAt DATETIME DEFAULT GETDATE(),
+                  ClosedAt NVARCHAR(50) NULL
+              );
+          END
+
+          -- IssueLogs Table
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[IssueLogs]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.IssueLogs (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL DEFAULT 1,
+                  IssueId INT NOT NULL,
+                  LogType NVARCHAR(50) NULL,
+                  [User] NVARCHAR(255) NULL,
+                  Remarks NVARCHAR(MAX) NULL,
+                  OldStatus NVARCHAR(100) NULL,
+                  NewStatus NVARCHAR(100) NULL,
+                  AttachmentUrl NVARCHAR(MAX) NULL,
+                  CreatedAt DATETIME DEFAULT GETDATE()
+              );
           END
           `;
           
