@@ -132,23 +132,23 @@ export function Header() {
         </div>
         
         {user && (
-          <div className="hidden md:flex items-center gap-3 pr-2">
-            <div className="text-right">
+          <div className="flex items-center gap-1.5 sm:gap-3 pr-2 border-r border-gray-200">
+            <div className="text-right hidden sm:block">
                <div className="text-sm font-medium text-gray-900">{user.Name || user.name}</div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm tracking-tight border border-blue-200">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm tracking-tight border border-blue-200 shrink-0">
               {(user.Name || user.name || 'U').charAt(0).toUpperCase()}
             </div>
             <button 
                 onClick={() => setIsChangePasswordOpen(true)}
-                className="ml-2 p-1.5 rounded-full hover:bg-gray-150 text-gray-500 hover:text-blue-600 transition-colors"
+                className="p-1.5 rounded-full hover:bg-gray-150 text-gray-500 hover:text-blue-600 transition-colors shrink-0"
                 title="Change Password"
             >
                 <Key className="w-4 h-4" />
             </button>
             <button 
                 onClick={logout}
-                className="ml-1 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-red-600 transition-colors"
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-red-600 transition-colors shrink-0"
                 title="Log out"
             >
                 <LogOut className="w-4 h-4" />

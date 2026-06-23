@@ -825,20 +825,60 @@ SET IDENTITY_INSERT Accounts OFF;
 
           {activeTab === 'backup' && (
             <div className="space-y-6">
+              {/* Premium Direct Backup Section */}
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden border-t-4 border-t-green-600">
+                <div className="p-5 border-b border-gray-100 bg-green-50/30">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1 px-2.5 bg-green-100 rounded text-green-800 text-xs font-semibold uppercase tracking-wider">Direct Download</span>
+                    <h2 className="text-lg font-semibold text-gray-950">Workspace Source Code ZIP</h2>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Download the complete ERP application source code directly from the live terminal workspace instantly (no GitHub account, credentials, or public repositories required).
+                  </p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between border border-green-100 rounded-xl p-5 bg-green-50/10 hover:border-green-300 hover:bg-green-50/30 transition-all gap-4">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-950 flex items-center gap-2">
+                        <Code className="w-5 h-5 text-green-600" />
+                        Complete ERP Source Directory (End-to-End)
+                      </h3>
+                      <p className="text-xs text-gray-600 max-w-2xl leading-relaxed">
+                        Downloads a compressed ZIP file containing all source files (<span className="text-green-700 font-medium">React pages, components, context, and the Express database server</span>). Fully populated with all necessary script setups to run local instances seamlessly.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono text-slate-600">✓ No GitHub required</span>
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono text-slate-600">✓ Full server + UI bundle</span>
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono text-slate-600">✓ Zero compilation latency</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleDownloadZip}
+                      disabled={isGeneratingZip}
+                      className={`shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-sm font-bold transition-all shadow ${isGeneratingZip ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white hover:shadow-md'}`}
+                    >
+                      <Download className={`w-4 h-4 ${isGeneratingZip ? 'animate-bounce' : ''}`} />
+                      {isGeneratingZip ? 'COMPILING ZIP...' : 'DOWNLOAD DIRECT SOURCE ZIP'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deployment & Database Export Sections */}
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-                  <h2 className="text-lg font-semibold text-gray-900">Database & Scripts Download</h2>
-                  <p className="text-xs text-gray-500 mt-1">Download database schemas, scripts, and complete data backups for local deployment.</p>
+                  <h2 className="text-lg font-semibold text-gray-900">Servers & Database Packages</h2>
+                  <p className="text-xs text-gray-500 mt-1">Download pre-compiled packages or database scripts ready for production restoration.</p>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex items-start justify-between border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
                     <div className="space-y-1">
                       <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
                         <Cloud className="w-4 h-4 text-blue-600" />
-                        Precompilied Cloud Deployment Package
+                        Precompiled Cloud Deployment Package
                       </h3>
                       <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
-                        Downloads a pre-built directory containing the compiled React frontend, bundled single-file Express server (no dev compilation/bundling required in cloud), and configuration files. Designed specifically for instant production cloud upload.
+                        Downloads a pre-built directory containing the compiled production React frontend, optimized single-file Express server build, and runtime manifests for direct Cloud Run / VPS upload.
                       </p>
                     </div>
                     <button 
@@ -848,26 +888,6 @@ SET IDENTITY_INSERT Accounts OFF;
                     >
                       <Download className={`w-4 h-4 ${isGeneratingDeployZip ? 'animate-bounce' : ''}`} />
                       {isGeneratingDeployZip ? 'Generating...' : 'Download Cloud Package'}
-                    </button>
-                  </div>
-
-                  <div className="flex items-start justify-between border border-gray-200 rounded-lg p-4 hover:border-green-300 hover:bg-green-50/30 transition-colors">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                        <Code className="w-4 h-4 text-green-600" />
-                        Complete Source Code (End-to-End)
-                      </h3>
-                      <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
-                        Downloads a comprehensive ZIP file containing the full project source code. Fully configured to run locally with your local SQL Server instance.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={handleDownloadZip}
-                      disabled={isGeneratingZip}
-                      className={`shrink-0 flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium transition-colors ${isGeneratingZip ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
-                    >
-                      <Download className={`w-4 h-4 ${isGeneratingZip ? 'animate-bounce' : ''}`} />
-                      {isGeneratingZip ? 'Generating ZIP...' : 'Download Source ZIP'}
                     </button>
                   </div>
                   

@@ -19,7 +19,8 @@ import {
   MapPin,
   Upload,
   Shield,
-  ClipboardList
+  ClipboardList,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MenuItem } from '../../types';
@@ -48,7 +49,7 @@ export function Sidebar() {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const { t } = useLanguage();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, logout } = useAuth();
   const { activeCompany, isMobileMenuOpen, setIsMobileMenuOpen } = useAppContext();
 
   const menuItems: MenuItem[] = [
@@ -269,14 +270,26 @@ export function Sidebar() {
         </div>
         
         <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 font-medium text-sm px-3 py-2">
-             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
-               {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
+          <div className="flex items-center justify-between font-medium text-sm px-3 py-1 gap-2">
+             <div className="flex items-center gap-3 truncate">
+               <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white shrink-0">
+                 {(user?.Name || user?.name || 'U').charAt(0).toUpperCase()}
+               </div>
+               <div className="truncate">
+                 <div className="text-white truncate">{user?.Name || user?.name}</div>
+                 <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
+               </div>
              </div>
-             <div className="truncate">
-               <div className="text-white truncate">{user?.Name || user?.name}</div>
-               <div className="text-xs text-slate-500 truncate">{user?.Email || user?.email || 'admin@fpc.com'}</div>
-             </div>
+             <button 
+                 onClick={() => {
+                   setIsMobileMenuOpen(false);
+                   logout();
+                 }}
+                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 hover:text-red-400 text-slate-400 flex items-center justify-center transition-colors shrink-0"
+                 title="Log out"
+             >
+                 <LogOut className="w-4 h-4" />
+             </button>
           </div>
         </div>
       </div>
