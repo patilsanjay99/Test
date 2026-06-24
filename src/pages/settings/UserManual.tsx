@@ -15,9 +15,9 @@ const FormSection = ({ title, desc, children, imagePlaceholder }: any) => (
       <p className="text-slate-600 text-sm">{desc}</p>
     </div>
     
-    <div className="bg-[#e2e8f0] border-b border-[#8faad8] p-8 flex justify-center print:hidden">
+    <div className="bg-[#e2e8f0] border-b border-[#8faad8] p-4 md:p-8 flex justify-start md:justify-center overflow-x-auto print:hidden custom-scrollbar">
       {/* Mock Form UI to simulate an actual screenshot themed like Company Master */}
-      <div className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-xl w-full max-w-3xl overflow-hidden transform transition-all hover:scale-[1.01]">
+      <div className="bg-[#f1f5f9] border border-[#8faad8] rounded-lg shadow-xl w-[600px] md:w-full md:max-w-3xl shrink-0 overflow-hidden transform transition-all hover:scale-[1.01]">
         
         {/* Green Title Header */}
         <div className="bg-[#0b8a1c] text-white py-2 px-4 border-b border-blue-900 text-center font-bold text-sm tracking-wide uppercase flex items-center justify-center gap-2">
@@ -25,43 +25,22 @@ const FormSection = ({ title, desc, children, imagePlaceholder }: any) => (
         </div>
 
         {/* Outer Excel-like grid border layer */}
-        <div className="p-0.5 bg-[#8faad8] flex flex-col">
-          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x-2 divide-[#8faad8]">
-            <div className="flex flex-col">
-              {React.Children.map(children, (child: any, index: number) => {
-                 if (index % 2 !== 0) return null; // Handle left column
-                 const label = child?.props?.name?.replace(' *', '') || 'Field';
-                 const isFullWidth = label?.includes('Matrix') || label?.includes('Journal Lines') || label?.includes('Line Items');
-                 return (
-                   <div className={`grid grid-cols-3 border-b border-blue-900 min-h-[40px] items-stretch ${isFullWidth ? 'col-span-2' : ''}`}>
-                     <div className="bg-[#f1f5f9] px-3 py-2 flex items-center font-bold text-[#1e293b] text-[10px] sm:col-span-1 border-r border-[#8faad8]">
-                       {label} {child?.props?.name?.includes('*') && <span className="text-red-500 ml-1">*</span>}
-                     </div>
-                     <div className="bg-[#f1f5f9] p-1 sm:col-span-2 flex items-center">
-                       <div className="w-full h-6 border border-[#8faad8] rounded bg-[#f4fbf4] opacity-70"></div>
-                     </div>
+        <div className="p-[1px] bg-[#8faad8]">
+          <div className="grid grid-cols-2 gap-[1px]">
+            {React.Children.map(children, (child: any) => {
+               const label = child?.props?.name?.replace(' *', '') || 'Field';
+               const isFullWidth = label?.includes('Matrix') || label?.includes('Journal Lines') || label?.includes('Line Items') || label?.includes('Remarks') || label?.includes('Terms');
+               return (
+                 <div className={`grid grid-cols-3 gap-[1px] bg-[#8faad8] min-h-[40px] items-stretch ${isFullWidth ? 'col-span-2' : ''}`}>
+                   <div className="bg-[#f1f5f9] px-3 py-2 flex items-center font-bold text-[#1e293b] text-[10px] col-span-1">
+                     {label} {child?.props?.name?.includes('*') && <span className="text-red-500 ml-1">*</span>}
                    </div>
-                 );
-              })}
-            </div>
-            <div className="flex flex-col">
-              {React.Children.map(children, (child: any, index: number) => {
-                 if (index % 2 === 0) return null; // Handle right column
-                 const label = child?.props?.name?.replace(' *', '') || 'Field';
-                 const isFullWidth = label?.includes('Matrix') || label?.includes('Journal Lines') || label?.includes('Line Items');
-                 if (isFullWidth) return null;
-                 return (
-                   <div className="grid grid-cols-3 border-b border-blue-900 min-h-[40px] items-stretch">
-                     <div className="bg-[#f1f5f9] px-3 py-2 flex items-center font-bold text-[#1e293b] text-[10px] sm:col-span-1 border-r border-[#8faad8]">
-                       {label} {child?.props?.name?.includes('*') && <span className="text-red-500 ml-1">*</span>}
-                     </div>
-                     <div className="bg-[#f1f5f9] p-1 sm:col-span-2 flex items-center">
-                       <div className="w-full h-6 border border-[#8faad8] rounded bg-[#f4fbf4] opacity-70"></div>
-                     </div>
+                   <div className="bg-[#f1f5f9] p-1 col-span-2 flex items-center">
+                     <div className={`w-full border border-[#8faad8] rounded bg-[#f4fbf4] opacity-70 ${isFullWidth ? 'h-20' : 'h-6'}`}></div>
                    </div>
-                 );
-              })}
-            </div>
+                 </div>
+               );
+            })}
           </div>
         </div>
       </div>
@@ -138,6 +117,7 @@ const chapters = [
 
 export function UserManual() {
   const [activeChapter, setActiveChapter] = useState('intro');
+  const [showContentMobile, setShowContentMobile] = useState(false);
 
   return (
     <div className="flex flex-col h-full bg-slate-50 print:bg-white overflow-hidden">
@@ -156,7 +136,7 @@ export function UserManual() {
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* Left Sidebar (Chapters) */}
-        <div className="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 print:hidden overflow-y-auto custom-scrollbar">
+        <div className={`w-full lg:w-80 bg-white border-r border-slate-200 flex-col shrink-0 print:hidden overflow-y-auto custom-scrollbar ${showContentMobile ? 'hidden lg:flex' : 'flex'}`}>
           <div className="p-6 pb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Chapters</span>
             <p className="text-slate-500 text-xs pl-1 mt-1 mb-4">Select a folder to view the user guide</p>
@@ -166,7 +146,7 @@ export function UserManual() {
             {chapters.map(chap => (
               <button
                 key={chap.id}
-                onClick={() => setActiveChapter(chap.id)}
+                onClick={() => { setActiveChapter(chap.id); setShowContentMobile(true); }}
                 className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
                   activeChapter === chap.id
                     ? 'bg-blue-50/50 border-blue-200 shadow-sm'
@@ -197,8 +177,16 @@ export function UserManual() {
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 print:bg-white p-8 print:p-0">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar bg-slate-50 print:bg-white p-4 lg:p-8 print:p-0 ${!showContentMobile ? 'hidden lg:block' : 'block'}`}>
           
+          <button 
+            className="lg:hidden flex items-center text-blue-600 text-sm font-semibold mb-6 hover:text-blue-700 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm"
+            onClick={() => setShowContentMobile(false)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="m15 18-6-6 6-6"/></svg>
+            Back to Chapters
+          </button>
+
           <div className="max-w-4xl mx-auto pb-24 print:pb-0" id="manual-content">
             
             {/* Action Bar for Section */}
