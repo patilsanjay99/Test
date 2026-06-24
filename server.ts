@@ -3464,7 +3464,10 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
     try {
       const table = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
       const data = req.body;
-      console.log("DEBUG: Incoming data for table " + table + ":", JSON.stringify(data));
+      if (data.LogoUrl && typeof data.LogoUrl === 'string' && data.LogoUrl.startsWith('ENC:')) {
+          data.LogoUrl = decodeURIComponent(data.LogoUrl.substring(4));
+      }
+      console.log("DEBUG: Incoming data for table " + table + ":", JSON.stringify({ ...data, LogoUrl: data.LogoUrl ? '...' : undefined }));
       console.log("DEBUG: CHECKING CONDITION:", table.toLowerCase() === 'salesquotations', !data.QuotationNumber);
       
       if (table.toLowerCase() === 'users') {
@@ -3955,6 +3958,9 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       const table = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
       const id = req.params.id;
       const data = req.body;
+      if (data.LogoUrl && typeof data.LogoUrl === 'string' && data.LogoUrl.startsWith('ENC:')) {
+          data.LogoUrl = decodeURIComponent(data.LogoUrl.substring(4));
+      }
       console.log(`[PUT /data/${table}/${id}] keys len: ${Object.keys(data).length}, LogoUrl starts with: `, data.LogoUrl ? data.LogoUrl.substring(0, 15) : undefined);
       const pkCol = getPrimaryKeyColumn(table);
       const syncTables = new Set([

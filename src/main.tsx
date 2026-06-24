@@ -13,17 +13,7 @@ Object.defineProperty(window, 'fetch', {
       newHeaders.set('X-HTTP-Method-Override', init.method);
       init.headers = newHeaders;
       
-      // Also append to URL to bypass strict WAF rules
-      if (typeof input === 'string') {
-        const separator = input.includes('?') ? '&' : '?';
-        input = input + separator + '_method=' + init.method;
-      } else if (input instanceof URL) {
-        input.searchParams.set('_method', init.method);
-      } else if (input instanceof Request) {
-        // We can't easily modify a Request object's URL without recreating it, 
-        // but fetch(Request) usually doesn't happen with our API calls
-      }
-      
+      // Remove URL appending as it can trigger WAFs. We will rely entirely on X-HTTP-Method-Override header.
       init.method = 'POST';
     }
     return originalFetch.call(window, input, init);

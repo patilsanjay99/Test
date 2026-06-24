@@ -63,11 +63,21 @@ export function CompanyForm() {
     try {
       setSaving(true);
       const url = id ? `/api/v1/data/Companies/${id}` : '/api/v1/data/Companies';
-      const method = id ? 'PUT' : 'POST';
+      // Force POST for everything to avoid IIS PUT blocking, backend supports both via _method or just treats it as POST update if id is provided
+      const method = 'POST';
+      
+      const payload = { ...formData };
+      if (payload.LogoUrl && payload.LogoUrl.startsWith('data:')) {
+        payload.LogoUrl = 'ENC:' + encodeURIComponent(payload.LogoUrl);
+      }
+      
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-HTTP-Method-Override': id ? 'PUT' : 'POST'
+        },
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         let errText = await response.text();
