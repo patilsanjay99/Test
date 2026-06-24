@@ -1588,8 +1588,11 @@ Please inspect and verify the following potential causes:
 
   // Method override middleware for environments that block PUT/DELETE (like some IIS hosts)
   app.use((req, res, next) => {
-    if (req.method === 'POST' && req.headers['x-http-method-override']) {
-      req.method = (req.headers['x-http-method-override'] as string).toUpperCase();
+    if (req.method === 'POST') {
+      const methodOverride = req.headers['x-http-method-override'] || req.query._method;
+      if (methodOverride) {
+        req.method = (methodOverride as string).toUpperCase();
+      }
     }
     next();
   });
