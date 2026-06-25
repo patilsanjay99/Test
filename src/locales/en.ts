@@ -13,6 +13,7 @@ export const en = {
     bankDetails: 'Bank Details',
     usersRoles: 'Users & Roles',
     locations: 'Locations',
+    unitsOfMeasurement: 'Units of Measurement',
     bulkUpload: 'Bulk Upload',
     itemsProducts: 'Item Details',
     accountGroups: 'Account Groups',

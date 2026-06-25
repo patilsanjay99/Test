@@ -11,6 +11,7 @@ import { ItemForm } from './pages/master-data/ItemForm';
 import { Customers } from './pages/master-data/Customers';
 import { CustomerForm } from './pages/master-data/CustomerForm';
 import { Locations } from './pages/master-data/Locations';
+import { Units } from './pages/master-data/Units';
 import { Vendors } from './pages/master-data/Vendors';
 import { BankForm } from './pages/master-data/BankForm';
 import { Banks } from './pages/master-data/Banks';
@@ -118,6 +119,7 @@ export default function App() {
               <Route path="banks/new" element={<BankForm />} />
               <Route path="banks/:id" element={<BankForm />} />
               <Route path="locations" element={<Locations />} />
+              <Route path="units" element={<Units />} />
               <Route path="financial-years" element={<FinancialYears />} />
               <Route path="financial-years/new" element={<FinancialYearForm />} />
               <Route path="users" element={<Users />} />

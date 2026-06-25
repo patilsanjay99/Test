@@ -429,6 +429,40 @@ async function ensureTableCreatedInMSSQL(tableName: string) {
     } catch (err: any) {
       console.error("❌ Auto-recovery failed to create IssueLogs table:", err.message);
     }
+  } else if (lowerName === "units") {
+    try {
+      console.log("🛠️ Dynamic Auto-recovery: Creating/upgrading Units table in MS SQL...");
+      await mssqlPool.request().query(`
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND type in (N'U'))
+        BEGIN
+            CREATE TABLE dbo.Units (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                CompanyId INT NULL,
+                Code NVARCHAR(50) NOT NULL,
+                Name NVARCHAR(255) NOT NULL,
+                Description NVARCHAR(MAX) NULL
+            );
+        END
+        
+        IF NOT EXISTS (SELECT * FROM dbo.Units)
+        BEGIN
+            INSERT INTO dbo.Units (Code, Name, Description) VALUES
+            ('NOS', 'Numbers', 'Count of individual items'),
+            ('KGS', 'Kilograms', 'Weight in kilograms'),
+            ('MTR', 'Meters', 'Length in meters'),
+            ('PCS', 'Pieces', 'Count of pieces'),
+            ('BOX', 'Boxes', 'Box packaging'),
+            ('LTR', 'Liters', 'Volume in liters'),
+            ('TON', 'Tons', 'Weight in metric tons'),
+            ('BAG', 'Bags', 'Bag packaging'),
+            ('PAC', 'Packets', 'Packet packaging'),
+            ('SET', 'Sets', 'Set of items');
+        END
+      `);
+      console.log("✅ Auto-recovery successful: Units table created/upgraded.");
+    } catch (err: any) {
+      console.error("❌ Auto-recovery failed to create Units table:", err.message);
+    }
   }
 }
 
@@ -1131,6 +1165,42 @@ async function startServer() {
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[InventoryItems]') AND name = 'IGST') ALTER TABLE dbo.InventoryItems ADD IGST DECIMAL(18,2) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[InventoryItems]') AND name = 'MinStock') ALTER TABLE dbo.InventoryItems ADD MinStock DECIMAL(18,2) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[InventoryItems]') AND name = 'MaxCapacity') ALTER TABLE dbo.InventoryItems ADD MaxCapacity DECIMAL(18,2) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[InventoryItems]') AND name = 'UnitId') ALTER TABLE dbo.InventoryItems ADD UnitId INT NULL;
+          END
+
+          -- Units Table Migration
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.Units (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL,
+                  Code NVARCHAR(50) NOT NULL,
+                  Name NVARCHAR(255) NOT NULL,
+                  Description NVARCHAR(MAX) NULL
+              );
+          END
+          ELSE
+          BEGIN
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND name = 'CompanyId') ALTER TABLE dbo.Units ADD CompanyId INT NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND name = 'Code') ALTER TABLE dbo.Units ADD Code NVARCHAR(50) NOT NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND name = 'Name') ALTER TABLE dbo.Units ADD Name NVARCHAR(255) NOT NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Units]') AND name = 'Description') ALTER TABLE dbo.Units ADD Description NVARCHAR(MAX) NULL;
+          END
+
+          -- Seed 10 default units if none exist
+          IF NOT EXISTS (SELECT * FROM dbo.Units)
+          BEGIN
+              INSERT INTO dbo.Units (Code, Name, Description) VALUES
+              ('NOS', 'Numbers', 'Count of individual items'),
+              ('KGS', 'Kilograms', 'Weight in kilograms'),
+              ('MTR', 'Meters', 'Length in meters'),
+              ('PCS', 'Pieces', 'Count of pieces'),
+              ('BOX', 'Boxes', 'Box packaging'),
+              ('LTR', 'Liters', 'Volume in liters'),
+              ('TON', 'Tons', 'Weight in metric tons'),
+              ('BAG', 'Bags', 'Bag packaging'),
+              ('PAC', 'Packets', 'Packet packaging'),
+              ('SET', 'Sets', 'Set of items');
           END
 
           -- JournalEntries Table Migration
@@ -2054,6 +2124,12 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
   }
 
   async function syncAccountForEntity(table: string, data: any, companyId: any, id: any) {
+      if (table.toLowerCase() === 'fpcmembers') {
+          // Do NOT create duplicate FPC-${id} accounts.
+          // FPC members are automatically synced to Vendors, which creates/updates a clean single VEN-${vendorId} account.
+          return;
+      }
+
       let resolvedCompanyId = companyId || data?.CompanyId || data?.COMPANYID || data?.companyid || data?.COMPANY_ID;
       if (resolvedCompanyId) {
           resolvedCompanyId = parseInt(String(resolvedCompanyId), 10);
@@ -2089,19 +2165,16 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
           accountGroup = 'Sundry Creditors';
           accountType = 'Liability';
           balanceType = 'Cr';
-      } else if (table.toLowerCase() === 'fpcmembers') {
-          accountName = data?.FarmerName || data?.Name || data?.farmername;
-          accountCode = `FPC-${resolvedId}`;
-          accountGroup = 'Sundry Creditors';
-          accountType = 'Liability';
-          balanceType = 'Cr';
       }
 
       console.log(`[DEBUG syncAccountForEntity] accountName=${accountName}, accountGroup=${accountGroup}`);
       if (!accountName) return;
 
       const isFpc = table.toLowerCase() === 'fpcmembers';
-      const fpcIdValue = isFpc ? resolvedId : null;
+      let fpcIdValue = isFpc ? resolvedId : null;
+      if (!isFpc && table.toLowerCase() === 'vendors') {
+          fpcIdValue = data?.FPCMemberId || data?.fpcmemberid || data?.FPCMemberID || null;
+      }
 
       try {
           const existing = await executeQuery(`SELECT * FROM Accounts WHERE AccountCode = ? AND CompanyId = ?`, [accountCode, resolvedCompanyId]);
@@ -3353,7 +3426,8 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
 
             const members = await executeQuery(`SELECT * FROM FPCMembers WHERE CompanyId = ? OR CompanyId IS NULL`, [cid]);
             for (const m of members) {
-               await syncAccountForEntity('fpcmembers', m, cid, m.Id);
+               // Sync FPC members to Vendors and create/update single VEN- account
+               await syncFPCMemberToVendor(m, cid);
             }
 
             const pinvoices = await executeQuery(`SELECT * FROM PurchaseInvoices WHERE CompanyId = ? OR CompanyId IS NULL`, [cid]);
@@ -3366,6 +3440,19 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
                await syncSalesInvoiceToJournal(sinv, cid, sinv.Id || sinv.id);
             }
         }
+
+        // Clean up old duplicate FPC accounts that are not used in JournalLines
+        try {
+            await executeQuery(`
+                DELETE FROM Accounts 
+                WHERE AccountCode LIKE 'FPC-%' 
+                AND Id NOT IN (SELECT DISTINCT AccountId FROM JournalLines WHERE AccountId IS NOT NULL)
+            `);
+            console.log("✅ Cleaned up old duplicate FPC accounts from the Accounts table.");
+        } catch (cleanErr: any) {
+            console.error("Failed to cleanup duplicate FPC accounts:", cleanErr.message);
+        }
+
         res.json({ success: true });
     } catch (e: any) {
         console.error(e);

@@ -13,6 +13,7 @@ interface ReturnLine {
   qty: number;
   rate: number;
   reason: string;
+  unit?: string;
 }
 
 export function SalesReturnForm() {
@@ -33,7 +34,7 @@ export function SalesReturnForm() {
   const [status, setStatus] = useState('Processed');
   
   const [lines, setLines] = useState<ReturnLine[]>([
-    { id: '1', item: '', qty: 1, rate: 0, reason: '' }
+    { id: '1', item: '', qty: 1, rate: 0, reason: '', unit: '' }
   ]);
   
   const [loadingInitial, setLoadingInitial] = useState(isEditing);
@@ -88,7 +89,7 @@ export function SalesReturnForm() {
   }, [id, isEditing]);
 
   const addLine = () => {
-    setLines([...lines, { id: Math.random().toString(), item: '', qty: 1, rate: 0, reason: '' }]);
+    setLines([...lines, { id: Math.random().toString(), item: '', qty: 1, rate: 0, reason: '', unit: '' }]);
   };
 
   const updateLine = (lineId: string, field: keyof ReturnLine, value: any) => {
@@ -100,7 +101,8 @@ export function SalesReturnForm() {
       ...l, 
       item: item.Name || item.name, 
       itemId: item.Id || item.id || item.ID,
-      rate: item.UnitPrice || item.unitPrice || 0
+      rate: item.UnitPrice || item.unitPrice || 0,
+      unit: item.Unit || item.unit || ''
     } : l));
   };
 
@@ -341,6 +343,7 @@ export function SalesReturnForm() {
                     <th className="p-3 w-48 border-r border-blue-900">Location</th>
                     <th className="p-3 w-40 border-r border-blue-900">Reason</th>
                     <th className="p-3 w-32 border-r border-blue-900 text-center">Return Qty</th>
+                    <th className="p-3 w-20 border-r border-blue-900 text-center">Unit</th>
                     <th className="p-3 w-32 text-right border-r border-blue-900">Rate (₹)</th>
                     <th className="p-3 w-32 text-right border-r border-blue-900">Valuation</th>
                     <th className="p-3 w-12 text-center"></th>
@@ -403,6 +406,15 @@ export function SalesReturnForm() {
                             value={line.qty || ''}
                             onChange={e => updateLine(line.id, 'qty', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center font-bold text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 w-20 border-r border-blue-900">
+                          <input 
+                            type="text" 
+                            disabled
+                            value={line.unit || ''}
+                            placeholder="Unit"
+                            className="w-full px-1 py-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-center font-semibold text-gray-700 focus:outline-none"
                           />
                         </td>
                         <td className="p-2 border-r border-blue-900">

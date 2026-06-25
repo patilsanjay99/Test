@@ -11,12 +11,14 @@ export function ItemForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     Name: '',
     ItemCode: '',
     Category: 'Seeds',
     Unit: 'kg',
+    UnitId: '',
     Status: 'Active',
     LocationId: '',
     IsSalesItem: 'Yes',
@@ -32,12 +34,17 @@ export function ItemForm() {
     Quantity: '0'
   });
 
-  // Fetch item details if editing a record
+  // Fetch item details, locations, and units
   useEffect(() => {
     if (activeCompany?.id) {
        fetch(`/api/data/locations?CompanyId=${activeCompany.id}`)
          .then(res => res.json())
          .then(data => setLocations(Array.isArray(data) ? data : []))
+         .catch(console.error);
+
+       fetch(`/api/data/Units?CompanyId=${activeCompany.id}`)
+         .then(res => res.json())
+         .then(data => setUnits(Array.isArray(data) ? data : []))
          .catch(console.error);
     }
   
@@ -52,6 +59,7 @@ export function ItemForm() {
               ItemCode: data.ItemCode ?? data.itemcode ?? '',
               Category: data.Category ?? data.category ?? 'Seeds',
               Unit: data.Unit ?? data.unit ?? 'kg',
+              UnitId: data.UnitId !== undefined && data.UnitId !== null ? String(data.UnitId) : (data.unitid !== undefined && data.unitid !== null ? String(data.unitid) : ''),
               Status: data.Status ?? data.status ?? 'Active',
               LocationId: data.Location !== undefined && data.Location !== null ? String(data.Location) : (data.location !== undefined && data.location !== null ? String(data.location) : ''),
               IsSalesItem: data.IsSalesItem ?? data.issalesitem ?? 'Yes',
@@ -73,7 +81,7 @@ export function ItemForm() {
         })
         .finally(() => setLoading(false));
     }
-  }, [id]);
+  }, [id, activeCompany?.id]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +100,7 @@ export function ItemForm() {
       ItemCode: finalItemCode,
       Category: formData.Category,
       Unit: formData.Unit,
+      UnitId: formData.UnitId ? parseInt(formData.UnitId) : null,
       Status: formData.Status,
       Location: formData.LocationId,
       IsSalesItem: formData.IsSalesItem,
@@ -282,13 +291,24 @@ export function ItemForm() {
                 Measurement Unit(UOM)
               </div>
               <div className="col-span-2 bg-[#f1f5f9] p-1 flex items-center">
-                <input 
-                  type="text" 
-                  placeholder="e.g. kg / bags"
-                  value={formData.Unit}
-                  onChange={(e) => handleInputChange('Unit', e.target.value)}
-                  className="w-2/3 px-2.5 py-1 border border-[#8faad8] rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] text-gray-900 font-semibold" 
-                />
+                <select 
+                  value={formData.UnitId}
+                  onChange={(e) => {
+                    const idVal = e.target.value;
+                    const selectedUnit = units.find(u => String(u.Id || u.id) === String(idVal));
+                    setFormData(prev => ({
+                      ...prev,
+                      UnitId: idVal,
+                      Unit: selectedUnit ? selectedUnit.Code : ''
+                    }));
+                  }}
+                  className="w-2/3 px-2.5 py-1 border border-[#8faad8] rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] text-gray-900 font-semibold cursor-pointer" 
+                >
+                  <option value="">-Select Unit-</option>
+                  {units.map((u) => (
+                    <option key={u.Id || u.id} value={u.Id || u.id}>{u.Code} - {u.Name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

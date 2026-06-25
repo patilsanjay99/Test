@@ -104,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           else if (path.startsWith('/master/users')) key = 'Master Data: Users & Roles';
           else if (path.startsWith('/master/locations')) key = 'Master Data: Locations';
           else if (path.startsWith('/master/items')) key = 'Master Data: Item Details';
+          else if (path.startsWith('/master/units')) key = 'Master Data: Units';
           else if (path.startsWith('/master/groups')) key = 'Master Data: Account Groups';
           else if (path.startsWith('/master/accounts')) key = 'Master Data: Chart of Accounts';
           else if (path.startsWith('/fpc/members')) key = 'FPC Management: FPC Members';

@@ -13,6 +13,7 @@ export const mr = {
     bankDetails: 'बँक तपशील (Bank Details)',
     usersRoles: 'वापरकर्ते आणि भूमिका',
     locations: 'स्थाने/माहिती (Locations)',
+    unitsOfMeasurement: 'मापन युनिट्स (UOM)',
     bulkUpload: 'एकत्रित अपलोड (Bulk Upload)',
     itemsProducts: 'वस्तू आणि उत्पादने',
     accountGroups: 'खाते गट (Account Groups)',

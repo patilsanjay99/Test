@@ -13,6 +13,7 @@ interface QuoteLine {
   rate: number;
   discount: number;
   gstRate: number;
+  unit?: string;
 }
 
 export function SalesQuotationForm() {
@@ -22,7 +23,7 @@ export function SalesQuotationForm() {
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [lines, setLines] = useState<QuoteLine[]>([
-    { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18 }
+    { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, unit: '' }
   ]);
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [validUntil, setValidUntil] = useState('');
@@ -115,7 +116,7 @@ export function SalesQuotationForm() {
   };
 
   const addLine = () => {
-    setLines([...lines, { id: Math.random().toString(), item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18 }]);
+    setLines([...lines, { id: Math.random().toString(), item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, unit: '' }]);
   };
 
   const updateLine = (id: string, field: keyof QuoteLine, value: any) => {
@@ -128,7 +129,8 @@ export function SalesQuotationForm() {
       item: item.Name || item.name, 
       itemId: item.Id || item.id || item.ID,
       rate: item.UnitPrice || item.unitPrice || 0,
-      hsn: item.ItemCode || item.itemCode || ''
+      hsn: item.ItemCode || item.itemCode || '',
+      unit: item.Unit || item.unit || ''
     } : l));
   };
 
@@ -263,6 +265,7 @@ export function SalesQuotationForm() {
                     <th className="p-3 border-r border-blue-900">Item Details</th>
                     <th className="p-3 w-28 border-r border-blue-900 text-center">HSN</th>
                     <th className="p-3 w-32 border-r border-blue-900 text-center">Qty</th>
+                    <th className="p-3 w-20 border-r border-blue-900 text-center">Unit</th>
                     <th className="p-3 w-28 text-right border-r border-blue-900">Rate (₹)</th>
                     <th className="p-3 w-20 text-right border-r border-blue-900">Disc (%)</th>
                     <th className="p-3 w-24 text-center border-r border-blue-900">GST (%)</th>
@@ -309,7 +312,7 @@ export function SalesQuotationForm() {
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center"
                           />
                         </td>
-                        <td className="p-2 w-32 border-r border-blue-900">
+                         <td className="p-2 w-32 border-r border-blue-900">
                           <input 
                             required
                             type="number" 
@@ -317,6 +320,15 @@ export function SalesQuotationForm() {
                             value={line.qty || ''}
                             onChange={e => updateLine(line.id, 'qty', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center font-bold text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 w-20 border-r border-blue-900">
+                          <input 
+                            type="text" 
+                            disabled
+                            value={line.unit || ''}
+                            placeholder="Unit"
+                            className="w-full px-1 py-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-center font-semibold text-gray-700 focus:outline-none"
                           />
                         </td>
                         <td className="p-2 border-r border-blue-900">

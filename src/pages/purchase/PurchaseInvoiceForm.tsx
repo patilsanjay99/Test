@@ -16,6 +16,7 @@ interface InvoiceLine {
   discount: number;
   gstRate: number;
   moisture?: string | number;
+  unit?: string;
 }
 
 export function PurchaseInvoiceForm() {
@@ -35,7 +36,7 @@ export function PurchaseInvoiceForm() {
   const [saving, setSaving] = useState(false);
 
   const [lines, setLines] = useState<InvoiceLine[]>([
-    { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, moisture: '' }
+    { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, moisture: '', unit: '' }
   ]);
 
   useEffect(() => {
@@ -142,9 +143,10 @@ export function PurchaseInvoiceForm() {
         const matchedItem = inventoryItems.find(item => String(item.Id || item.id || item.ID) === String(line.itemId));
         if (matchedItem) {
           const newGst = getGstRateForItem(matchedItem, selectedVendorId);
-          if (line.gstRate !== newGst) {
+          const matchedUnit = matchedItem.Unit || matchedItem.unit || '';
+          if (line.gstRate !== newGst || line.unit !== matchedUnit) {
             changed = true;
-            return { ...line, gstRate: newGst };
+            return { ...line, gstRate: newGst, unit: matchedUnit };
           }
         }
         return line;
@@ -154,7 +156,7 @@ export function PurchaseInvoiceForm() {
   }, [selectedVendorId, vendors, inventoryItems, activeCompany?.StateCode]);
 
   const addLine = () => {
-    setLines([...lines, { id: Math.random().toString(), item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, moisture: '' }]);
+    setLines([...lines, { id: Math.random().toString(), item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, moisture: '', unit: '' }]);
   };
 
   const updateLine = (id: string, field: keyof InvoiceLine, value: any) => {
@@ -171,7 +173,8 @@ export function PurchaseInvoiceForm() {
       rate: buyingRate,
       gstRate: gstRate,
       hsn: item.ItemCode || item.itemCode || '',
-      moisture: ''
+      moisture: '',
+      unit: item.Unit || item.unit || ''
     } : l));
   };
 
@@ -357,6 +360,7 @@ export function PurchaseInvoiceForm() {
                     <th className="p-3 w-28 border-r border-blue-900 text-center">Moisture %</th>
                     <th className="p-3 w-56 border-r border-blue-900">Location</th>
                     <th className="p-3 w-32 text-center border-r border-blue-900">Qty</th>
+                    <th className="p-3 w-20 text-center border-r border-blue-900">Unit</th>
                     <th className="p-3 w-28 text-right border-r border-blue-900">Rate (₹)</th>
                     <th className="p-3 w-20 text-right border-r border-blue-900">Disc (%)</th>
                     <th className="p-3 w-24 text-center border-r border-blue-900">GST (%)</th>
@@ -423,6 +427,15 @@ export function PurchaseInvoiceForm() {
                             value={line.qty || ''}
                             onChange={e => updateLine(line.id, 'qty', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-center font-bold text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 w-20 border-r border-blue-900">
+                          <input 
+                            type="text" 
+                            disabled
+                            value={line.unit || ''}
+                            placeholder="Unit"
+                            className="w-full px-1 py-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-center font-semibold text-gray-700 focus:outline-none"
                           />
                         </td>
                         <td className="p-2 border-r border-blue-900">

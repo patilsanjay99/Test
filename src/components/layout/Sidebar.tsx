@@ -21,7 +21,8 @@ import {
   Shield,
   ClipboardList,
   LogOut,
-  BookOpen
+  BookOpen,
+  Scale
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MenuItem } from '../../types';
@@ -78,6 +79,7 @@ export function Sidebar() {
         { title: t('sidebar.usersRoles'), path: '/master/users', icon: Users },
         { title: 'System Roles', path: '/master/system-roles', icon: Shield },
         { title: t('sidebar.locations'), path: '/master/locations', icon: MapPin },
+        { title: t('sidebar.unitsOfMeasurement'), path: '/master/units', icon: Scale },
         { title: t('sidebar.itemsProducts'), path: '/master/items', icon: Package },
         { title: t('sidebar.accountGroups'), path: '/master/groups', icon: Landmark },
         { title: t('sidebar.chartOfAccounts'), path: '/master/accounts', icon: Landmark },

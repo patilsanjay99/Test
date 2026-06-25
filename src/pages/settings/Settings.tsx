@@ -85,6 +85,7 @@ export function Settings() {
     'Master Data: Users & Roles': { view: true, add: false, edit: false, delete: false },
     'Master Data: Item Details': { view: true, add: false, edit: false, delete: false },
     'Master Data: Locations': { view: true, add: false, edit: false, delete: false },
+    'Master Data: Units': { view: true, add: true, edit: true, delete: true },
     'Master Data: Account Groups': { view: true, add: false, edit: false, delete: false },
     'Master Data: Chart of Accounts': { view: true, add: false, edit: false, delete: false },
     'FPC Management: FPC Members': { view: true, add: true, edit: true, delete: false },
