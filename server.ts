@@ -1331,6 +1331,7 @@ async function startServer() {
                   CompanyId INT NULL,
                   FinancialYearId INT NULL,
                   OrderNumber NVARCHAR(50) NULL,
+                  QuotationNo NVARCHAR(100) NULL,
                   CustomerId INT NULL,
                   TotalAmount DECIMAL(18,2) DEFAULT 0,
                   Status NVARCHAR(50) DEFAULT 'Draft',
@@ -1347,6 +1348,7 @@ async function startServer() {
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesOrders]') AND name = 'ItemsData') ALTER TABLE [dbo].[SalesOrders] ADD ItemsData NVARCHAR(MAX) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesOrders]') AND name = 'Remarks') ALTER TABLE [dbo].[SalesOrders] ADD Remarks NVARCHAR(MAX) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesOrders]') AND name = 'TermsAndConditions') ALTER TABLE [dbo].[SalesOrders] ADD TermsAndConditions NVARCHAR(MAX) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesOrders]') AND name = 'QuotationNo') ALTER TABLE [dbo].[SalesOrders] ADD QuotationNo NVARCHAR(100) NULL;
           END
 
           -- PurchaseInvoices Table Migration

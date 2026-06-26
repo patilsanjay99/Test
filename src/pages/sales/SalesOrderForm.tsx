@@ -23,6 +23,9 @@ export function SalesOrderForm() {
   const { activeCompany, activeFinancialYear } = useAppContext();
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [salesQuotations, setSalesQuotations] = useState<any[]>([]);
+  const [quotationNo, setQuotationNo] = useState('');
+  const [loadMessage, setLoadMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [lines, setLines] = useState<OrderLine[]>([
     { id: '1', item: '', hsn: '', qty: 1, rate: 0, discount: 0, gstRate: 18, unit: '' }
   ]);
@@ -32,6 +35,37 @@ export function SalesOrderForm() {
   const [orderNumber, setOrderNumber] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const handleLoadQuotation = (qNo: string) => {
+    setLoadMessage(null);
+    if (!qNo) return;
+
+    const found = salesQuotations.find(
+      q => (q.QuotationNumber || '').trim().toLowerCase() === qNo.trim().toLowerCase()
+    );
+
+    if (found) {
+      if (found.CustomerId) {
+        setSelectedCustomer(found.CustomerId);
+      }
+      if (found.ItemsData) {
+        try {
+          const items = JSON.parse(found.ItemsData);
+          if (Array.isArray(items)) {
+            setLines(items);
+          }
+        } catch (err) {
+          console.error("Failed to parse quotation lines", err);
+        }
+      }
+      if (found.TermsAndConditions) {
+        setTermsAndConditions(found.TermsAndConditions);
+      }
+      setLoadMessage({ text: `Successfully loaded details from Quotation: ${found.QuotationNumber}`, isError: false });
+    } else {
+      setLoadMessage({ text: `Quotation number "${qNo}" not found.`, isError: true });
+    }
+  };
 
   useEffect(() => {
     if (activeCompany?.id) {
@@ -44,6 +78,11 @@ export function SalesOrderForm() {
           .then(res => res.json())
           .then(data => setCustomers(Array.isArray(data) ? data : []))
           .catch(console.error);
+
+        fetch(`/api/data/SalesQuotations?CompanyId=${activeCompany.id}`)
+          .then(res => res.json())
+          .then(data => setSalesQuotations(Array.isArray(data) ? data : []))
+          .catch(console.error);
         
         if (id) {
           fetch(`/api/data/SalesOrders?CompanyId=${activeCompany.id}`)
@@ -52,6 +91,7 @@ export function SalesOrderForm() {
                 const order = Array.isArray(data) ? data.find(q => q.Id == id) : null;
                 if (order) {
                    setOrderNumber(order.OrderNumber || '');
+                   setQuotationNo(order.QuotationNo || '');
                    setSelectedCustomer(order.CustomerId);
                    setOrderDate(order.OrderDate.split('/').reverse().join('-'));
                    setExpectedDelivery(order.ExpectedDelivery ? order.ExpectedDelivery.split('/').reverse().join('-') : '');
@@ -95,7 +135,8 @@ export function SalesOrderForm() {
         ItemsData: JSON.stringify(lines),
         Remarks: '',
         TermsAndConditions: termsAndConditions,
-        OrderNumber: orderNumber
+        OrderNumber: orderNumber,
+        QuotationNo: quotationNo
     };
 
     try {
@@ -193,6 +234,43 @@ export function SalesOrderForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x-2 md:divide-[#8faad8]">
             <div className="flex flex-col">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
+                <div className="bg-[#f2fcf2] px-4 py-3 flex flex-col justify-center font-bold text-[#0b8a1c] text-sm sm:col-span-1 border-r border-[#8faad8]">
+                  <span className="flex items-center gap-1">Ref Quotation No</span>
+                  <span className="text-[10px] text-gray-500 font-normal italic">(Optional)</span>
+                </div>
+                <div className="bg-[#f2fcf2] p-1.5 sm:col-span-2 flex flex-col justify-center gap-1">
+                  <div className="flex gap-1.5 w-full">
+                    <div className="flex-1">
+                      <AutocompleteCombobox
+                        options={salesQuotations.map(q => ({
+                          value: String(q.QuotationNumber || ''),
+                          label: q.QuotationNumber || '',
+                          sublabel: `Date: ${q.QuotationDate || '-'}, Amt: ₹${q.TotalAmount || 0}`
+                        }))}
+                        value={quotationNo}
+                        onChange={(val) => {
+                          setQuotationNo(val);
+                        }}
+                        placeholder="Type or Select Quotation..."
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleLoadQuotation(quotationNo)}
+                      className="bg-green-700 hover:bg-green-800 text-white text-xs font-bold px-3 py-1.5 rounded uppercase border border-green-900 transition-all shadow-sm flex items-center"
+                    >
+                      Load
+                    </button>
+                  </div>
+                  {loadMessage && (
+                    <span className={`text-[11px] font-semibold ${loadMessage.isError ? 'text-red-600' : 'text-green-700'}`}>
+                      {loadMessage.text}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
                 <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
                   Customer <span className="text-red-500 ml-1">*</span>

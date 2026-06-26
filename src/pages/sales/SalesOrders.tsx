@@ -88,6 +88,7 @@ export function SalesOrders() {
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                 <th className="font-medium p-4 border-b border-gray-200">Order No</th>
+                <th className="font-medium p-4 border-b border-gray-200">Quotation No</th>
                 <th className="font-medium p-4 border-b border-gray-200">Date</th>
                 <th className="font-medium p-4 border-b border-gray-200">Customer</th>
                 <th className="font-medium p-4 border-b border-gray-200">Place</th>
@@ -100,6 +101,7 @@ export function SalesOrders() {
               {orders.map((ord) => (
                 <tr key={ord.Id} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4 text-sm font-medium text-blue-600">{ord.OrderNumber}</td>
+                  <td className="p-4 text-sm text-gray-600 font-mono">{ord.QuotationNo || '-'}</td>
                   <td className="p-4 text-sm text-gray-600">
                     {ord.OrderDate ? (
                       ord.OrderDate.includes('-') 

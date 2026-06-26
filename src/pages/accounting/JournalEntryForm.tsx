@@ -46,7 +46,7 @@ export function JournalEntryForm() {
 
   // Load ledger accounts dynamically
   useEffect(() => {
-    fetch(`/api/v1/data/Accounts`)
+    fetch(`/api/v1/data/Accounts?CompanyId=${companyId}`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch accounts');
         return res.json();

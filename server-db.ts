@@ -646,6 +646,37 @@ CREATE TABLE IF NOT EXISTS PurchaseOrders (
     Remarks TEXT,
     Terms TEXT
 );
+
+CREATE TABLE IF NOT EXISTS SalesQuotations (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    CompanyId INTEGER,
+    FinancialYearId INTEGER,
+    QuotationNumber TEXT,
+    CustomerId INTEGER,
+    TotalAmount REAL,
+    Status TEXT DEFAULT 'Draft',
+    QuotationDate TEXT,
+    ExpiryDate TEXT,
+    Remarks TEXT,
+    ItemsData TEXT,
+    TermsAndConditions TEXT
+);
+
+CREATE TABLE IF NOT EXISTS SalesOrders (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    CompanyId INTEGER,
+    FinancialYearId INTEGER,
+    OrderNumber TEXT,
+    QuotationNo TEXT,
+    CustomerId INTEGER,
+    TotalAmount REAL,
+    Status TEXT DEFAULT 'Draft',
+    OrderDate TEXT,
+    ExpectedDelivery TEXT,
+    Remarks TEXT,
+    ItemsData TEXT,
+    TermsAndConditions TEXT
+);
 `);
 
 try {
@@ -701,6 +732,35 @@ try {
 
 try {
   addColumnIfNotExists('Companies', 'LogoUrl', 'TEXT');
+} catch(e) {}
+
+try {
+  addColumnIfNotExists('SalesOrders', 'QuotationNo', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'CompanyId', 'INTEGER');
+  addColumnIfNotExists('SalesOrders', 'FinancialYearId', 'INTEGER');
+  addColumnIfNotExists('SalesOrders', 'OrderNumber', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'CustomerId', 'INTEGER');
+  addColumnIfNotExists('SalesOrders', 'TotalAmount', 'REAL DEFAULT 0');
+  addColumnIfNotExists('SalesOrders', 'Status', 'TEXT DEFAULT \'Draft\'');
+  addColumnIfNotExists('SalesOrders', 'OrderDate', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'ExpectedDelivery', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'Remarks', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'ItemsData', 'TEXT');
+  addColumnIfNotExists('SalesOrders', 'TermsAndConditions', 'TEXT');
+} catch(e) {}
+
+try {
+  addColumnIfNotExists('SalesQuotations', 'CompanyId', 'INTEGER');
+  addColumnIfNotExists('SalesQuotations', 'FinancialYearId', 'INTEGER');
+  addColumnIfNotExists('SalesQuotations', 'QuotationNumber', 'TEXT');
+  addColumnIfNotExists('SalesQuotations', 'CustomerId', 'INTEGER');
+  addColumnIfNotExists('SalesQuotations', 'TotalAmount', 'REAL DEFAULT 0');
+  addColumnIfNotExists('SalesQuotations', 'Status', 'TEXT DEFAULT \'Draft\'');
+  addColumnIfNotExists('SalesQuotations', 'QuotationDate', 'TEXT');
+  addColumnIfNotExists('SalesQuotations', 'ExpiryDate', 'TEXT');
+  addColumnIfNotExists('SalesQuotations', 'Remarks', 'TEXT');
+  addColumnIfNotExists('SalesQuotations', 'ItemsData', 'TEXT');
+  addColumnIfNotExists('SalesQuotations', 'TermsAndConditions', 'TEXT');
 } catch(e) {}
 
 // Add default company if not exists
