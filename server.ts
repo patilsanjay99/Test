@@ -3443,6 +3443,51 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
             }
         }
 
+        // Self-Healing: Merge any old 'FPC-%' accounts that have transactions/references into their correct corresponding synced 'VEN-%' accounts.
+        try {
+            console.log("🔄 Starting self-healing merge of FPC-% accounts to VEN-% accounts...");
+            const fpcAccounts = await executeQuery(`SELECT * FROM Accounts WHERE AccountCode LIKE 'FPC-%'`);
+            for (const fpcAcc of fpcAccounts) {
+                const fpcAccId = fpcAcc.Id || fpcAcc.id || fpcAcc.ID;
+                const fpcCode = fpcAcc.AccountCode || fpcAcc.accountcode || '';
+                const memberIdStr = fpcCode.replace('FPC-', '');
+                const memberId = parseInt(memberIdStr, 10);
+                if (isNaN(memberId)) continue;
+
+                // 1. Find linked vendor record for this memberId
+                const vendors = await executeQuery(`SELECT * FROM Vendors WHERE FPCMemberId = ?`, [memberId]);
+                if (vendors && vendors.length > 0) {
+                    const vendor = vendors[0];
+                    const vendorId = vendor.Vendor_ID || vendor.Vendor_Id || vendor.vendor_id || vendor.Id || vendor.id || vendor.ID;
+                    if (vendorId) {
+                        // 2. Find the corresponding Vendor account (VEN-xx)
+                        const companyId = fpcAcc.CompanyId || fpcAcc.companyid || null;
+                        const venAccs = await executeQuery(
+                            `SELECT * FROM Accounts WHERE AccountCode = ? AND (CompanyId = ? OR CompanyId IS NULL)`,
+                            [`VEN-${vendorId}`, companyId]
+                        );
+                        if (venAccs && venAccs.length > 0) {
+                            const venAccId = venAccs[0].Id || venAccs[0].id || venAccs[0].ID;
+                            if (venAccId && venAccId !== fpcAccId) {
+                                console.log(`🔗 Merging Account ${fpcCode} (ID: ${fpcAccId}) into VEN-${vendorId} (ID: ${venAccId})...`);
+                                
+                                // Point all referencing transactions to the new/correct vendor ledger account
+                                await executeQuery(`UPDATE JournalLines SET AccountId = ? WHERE AccountId = ?`, [venAccId, fpcAccId]);
+                                try { await executeQuery(`UPDATE CashReceipts SET AccountId = ? WHERE AccountId = ?`, [venAccId, fpcAccId]); } catch (e) {}
+                                try { await executeQuery(`UPDATE CashPayments SET AccountId = ? WHERE AccountId = ?`, [venAccId, fpcAccId]); } catch (e) {}
+                                try { await executeQuery(`UPDATE BankReceipts SET AccountId = ? WHERE AccountId = ?`, [venAccId, fpcAccId]); } catch (e) {}
+                                try { await executeQuery(`UPDATE BankPayments SET AccountId = ? WHERE AccountId = ?`, [venAccId, fpcAccId]); } catch (e) {}
+                                
+                                console.log(`✅ Successfully merged transactions. Safe to delete old duplicate FPC account ${fpcCode}.`);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (mergeErr: any) {
+            console.error("Failed during self-healing FPC account merge:", mergeErr.message);
+        }
+
         // Clean up old duplicate FPC accounts that are not used in JournalLines
         try {
             await executeQuery(`
@@ -3929,6 +3974,80 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       if (keys.length === 0) return res.status(400).json({ error: "Empty body" });
 
       const pkCol = getPrimaryKeyColumn(table);
+
+      // --- Duplicate Prevention and Upsert Interceptor ---
+      const tableLower = table.toLowerCase();
+      const resolvedCid = data.CompanyId || data.COMPANYID || data.companyid || data.Company_Id || null;
+      let existingRecord = null;
+      
+      if (tableLower === 'fpcmembers') {
+          const farmerName = data.FarmerName || data.farmername || '';
+          if (farmerName) {
+              existingRecord = await executeGet(
+                  `SELECT Id, id, ID FROM FPCMembers WHERE LOWER(TRIM(FarmerName)) = ? AND (CompanyId = ? OR CompanyId IS NULL OR (CompanyId IS NULL AND ? IS NULL))`,
+                  [farmerName.trim().toLowerCase(), resolvedCid, resolvedCid]
+              );
+          }
+      } else if (tableLower === 'vendors') {
+          const vendorName = data.Vendor_NAME || data.VendorName || data.vendorname || '';
+          if (vendorName) {
+              existingRecord = await executeGet(
+                  `SELECT Vendor_ID, Vendor_Id, Id, id FROM Vendors WHERE (LOWER(TRIM(Vendor_NAME)) = ? OR LOWER(TRIM(VendorName)) = ?) AND (COMPANYID = ? OR CompanyId = ? OR COMPANYID IS NULL OR CompanyId IS NULL)`,
+                  [vendorName.trim().toLowerCase(), vendorName.trim().toLowerCase(), resolvedCid, resolvedCid]
+              );
+          }
+      } else if (tableLower === 'customers') {
+          const customerName = data.CustomerName || data.Name || data.customername || '';
+          if (customerName) {
+              existingRecord = await executeGet(
+                  `SELECT Id, id FROM Customers WHERE (LOWER(TRIM(CustomerName)) = ? OR LOWER(TRIM(Name)) = ?) AND (CompanyId = ? OR CompanyId IS NULL)`,
+                  [customerName.trim().toLowerCase(), customerName.trim().toLowerCase(), resolvedCid]
+              );
+          }
+      }
+
+      if (existingRecord) {
+          const existingId = existingRecord.Id || existingRecord.id || existingRecord.ID || existingRecord.Vendor_ID || existingRecord.Vendor_Id;
+          console.log(`[Duplicate Interceptor] Found existing record in ${table} with ID ${existingId}. Seamlessly upserting instead.`);
+          
+          // Let's perform an UPDATE instead of INSERT on the existing ID
+          const updateKeys = Object.keys(data).filter(k => {
+              const kl = k.toLowerCase();
+              return kl !== 'id' && kl !== 'vendor_id' && kl !== 'createdat' && kl !== 'added_on';
+          });
+          
+          if (mssqlPool) {
+              const request = mssqlPool.request();
+              const setClauses = [];
+              for (let i = 0; i < updateKeys.length; i++) {
+                  setClauses.push(`[${updateKeys[i]}] = @p${i}`);
+                  const normalizedVal = normalizeValueForBind(updateKeys[i], data[updateKeys[i]]);
+                  request.input(`p${i}`, normalizedVal);
+              }
+              request.input('id', existingId);
+              const sqlQuery = `UPDATE [dbo].[${table}] SET ${setClauses.join(', ')} WHERE [${pkCol}] = @id`;
+              await request.query(sqlQuery);
+          } else {
+              const setClauses = updateKeys.map(k => `${k} = ?`).join(', ');
+              const updateValues = updateKeys.map(k => data[k]);
+              updateValues.push(existingId);
+              sqliteDb.prepare(`UPDATE ${table} SET ${setClauses} WHERE ${pkCol} = ?`).run(...updateValues);
+          }
+          
+          // Execute post-save synchronization hooks
+          if (tableLower === 'customers' || tableLower === 'vendors' || tableLower === 'fpcmembers') {
+              await syncAccountForEntity(table, data, resolvedCid, existingId);
+              if (tableLower === 'fpcmembers') {
+                  const fullDataWithId = { ...data, Id: existingId };
+                  await syncFPCMemberToVendor(fullDataWithId, resolvedCid);
+              }
+          }
+          
+          await logAuditAction("System Admin", "UPSERT_ON_POST_DUPLICATE", table, existingId, data, data.FinancialYearId || null, resolvedCid);
+          
+          return res.json({ id: existingId, ...data });
+      }
+      // --- End Duplicate Interceptor ---
 
       let insertedId = null;
       if (mssqlPool) {

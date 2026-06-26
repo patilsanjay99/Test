@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 export interface ComboboxOption {
   value: string | number;
@@ -29,15 +29,22 @@ export const AutocompleteCombobox: React.FC<AutocompleteComboboxProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Sort options alphabetically by default
+  const sortedOptions = useMemo(() => {
+    return [...options].sort((a, b) =>
+      String(a.label || '').localeCompare(String(b.label || ''), undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [options]);
+
   // Sync search text with the selected option label on value or options change
   useEffect(() => {
-    const selectedOption = options.find(opt => String(opt.value) === String(value));
+    const selectedOption = sortedOptions.find(opt => String(opt.value) === String(value));
     if (selectedOption) {
       setSearch(selectedOption.label);
     } else if (value === '' || value === undefined || value === null) {
       setSearch('');
     }
-  }, [value, options]);
+  }, [value, sortedOptions]);
 
   // Handle click outside to close the dropdown
   useEffect(() => {
@@ -45,7 +52,7 @@ export const AutocompleteCombobox: React.FC<AutocompleteComboboxProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         // Reset search to match selected option if closed without selecting
-        const selectedOption = options.find(opt => String(opt.value) === String(value));
+        const selectedOption = sortedOptions.find(opt => String(opt.value) === String(value));
         if (selectedOption) {
           setSearch(selectedOption.label);
         } else {
@@ -58,11 +65,11 @@ export const AutocompleteCombobox: React.FC<AutocompleteComboboxProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [value, options]);
+  }, [value, sortedOptions]);
 
-  const filteredOptions = options.filter(opt => {
+  const filteredOptions = sortedOptions.filter(opt => {
     const q = search.toLowerCase();
-    const l = opt.label.toLowerCase();
+    const l = (opt.label || '').toLowerCase();
     const s = opt.sublabel ? opt.sublabel.toLowerCase() : '';
     return l.includes(q) || s.includes(q) || String(opt.value).toLowerCase().includes(q);
   });

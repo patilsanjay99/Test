@@ -243,6 +243,7 @@ export function Reports() {
         const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : (inv.VendorName || 'Unknown');
         const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
         txns.push({
+          Id: inv.Id || inv.id || 0,
           date: pDate,
           voucherType: 'Purchase',
           voucherNo: inv.InvoiceNumber,
@@ -272,6 +273,7 @@ export function Reports() {
         const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
         const pPlace = cust ? (cust.Place || cust.Address || '') : '';
         txns.push({
+          Id: inv.Id || inv.id || 0,
           date: sDate,
           voucherType: 'Sales',
           voucherNo: inv.InvoiceNumber,
@@ -301,6 +303,7 @@ export function Reports() {
         const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
         const pPlace = cust ? (cust.Place || cust.Address || '') : '';
         txns.push({
+          Id: ret.Id || ret.id || 0,
           date: rDate,
           voucherType: 'Sales Return',
           voucherNo: ret.ReturnNumber || `SR-${ret.Id || ret.id}`,
@@ -328,6 +331,7 @@ export function Reports() {
         const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : 'Unknown';
         const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
         txns.push({
+          Id: ret.Id || ret.id || 0,
           date: rDate,
           voucherType: 'Purchase Return',
           voucherNo: ret.ReturnNumber || `PR-${ret.Id || ret.id}`,
@@ -362,6 +366,7 @@ export function Reports() {
         }
         
         txns.push({
+          Id: adj.Id || adj.id || 0,
           date: aDate,
           voucherType: 'Adjustment',
           voucherNo: adj.AdjustmentNo,
@@ -390,7 +395,26 @@ export function Reports() {
 
     runningQty = adjustedOpeningQty;
 
-    const periodTxns = filteredTxns.filter(t => t.date >= fromDate && t.date <= toDate).sort((a, b) => a.date.localeCompare(b.date));
+    const periodTxns = filteredTxns
+      .filter(t => t.date >= fromDate && t.date <= toDate)
+      .sort((a, b) => {
+        // 1. Sort by Date ascending
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+
+        // 2. Sort by Inward vs Outward (Inward first)
+        const aIsInward = a.inward > 0;
+        const bIsInward = b.inward > 0;
+        if (aIsInward && !bIsInward) return -1;
+        if (!aIsInward && bIsInward) return 1;
+
+        // 3. Sort by VoucherNo (numerical comparison)
+        const vCompare = String(a.voucherNo || '').localeCompare(String(b.voucherNo || ''), undefined, { numeric: true });
+        if (vCompare !== 0) return vCompare;
+
+        // 4. Sort by entry Id
+        return (a.Id || 0) - (b.Id || 0);
+      });
     
     const ledgerRows = periodTxns.map(t => {
       runningQty += t.inward;

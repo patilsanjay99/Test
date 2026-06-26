@@ -4,6 +4,7 @@ import { exportToCSV } from '../../lib/utils';
 import { useAppContext } from '../../context/AppContext';
 import { formatDate } from '../../utils/dateFormatter';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 
 export function StockLedger() {
   const { activeCompany } = useAppContext();
@@ -60,6 +61,7 @@ export function StockLedger() {
         const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : (inv.VendorName || 'Unknown');
         const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
         txns.push({
+          Id: inv.Id || inv.id || 0,
           Date: pDate.substring(0, 10),
           VoucherType: 'Purchase',
           VoucherNo: inv.InvoiceNumber,
@@ -84,6 +86,7 @@ export function StockLedger() {
         const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
         const pPlace = cust ? (cust.Place || cust.Address || '') : '';
         txns.push({
+          Id: inv.Id || inv.id || 0,
           Date: sDate.substring(0, 10),
           VoucherType: 'Sales',
           VoucherNo: inv.InvoiceNumber,
@@ -108,6 +111,7 @@ export function StockLedger() {
         const pName = cust ? (cust.CustomerName || cust.Name) : 'Unknown';
         const pPlace = cust ? (cust.Place || cust.Address || '') : '';
         txns.push({
+          Id: ret.Id || ret.id || 0,
           Date: rDate.substring(0, 10),
           VoucherType: 'Sales Return',
           VoucherNo: ret.ReturnNumber || `SR-${ret.Id || ret.id}`,
@@ -132,6 +136,7 @@ export function StockLedger() {
         const pName = vend ? (vend.Vendor_NAME || vend.VendorName || vend.Name) : 'Unknown';
         const pPlace = vend ? (vend.Place || vend.Vendor_address || '') : '';
         txns.push({
+          Id: ret.Id || ret.id || 0,
           Date: rDate.substring(0, 10),
           VoucherType: 'Purchase Return',
           VoucherNo: ret.ReturnNumber || `PR-${ret.Id || ret.id}`,
@@ -144,7 +149,24 @@ export function StockLedger() {
       });
     });
 
-    txns.sort((a, b) => a.Date.localeCompare(b.Date));
+    txns.sort((a, b) => {
+      // 1. Sort by Date ascending
+      const dateCompare = a.Date.localeCompare(b.Date);
+      if (dateCompare !== 0) return dateCompare;
+
+      // 2. Sort by Inward vs Outward (Inward first)
+      const aIsInward = a.Inward > 0;
+      const bIsInward = b.Inward > 0;
+      if (aIsInward && !bIsInward) return -1;
+      if (!aIsInward && bIsInward) return 1;
+
+      // 3. Sort by VoucherNo (numerical comparison)
+      const vCompare = String(a.VoucherNo || '').localeCompare(String(b.VoucherNo || ''), undefined, { numeric: true });
+      if (vCompare !== 0) return vCompare;
+
+      // 4. Sort by entry Id
+      return (a.Id || 0) - (b.Id || 0);
+    });
 
     let runQty = openingQty;
     const ledgerRows = [];
@@ -209,20 +231,18 @@ export function StockLedger() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50">
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">Select Item</label>
-            <select
-              className="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            <AutocompleteCombobox
+              options={items.map((i: any) => ({
+                value: String(i.Id || i.id),
+                label: i.Name || i.ItemCode || '',
+                sublabel: i.Category ? `Category: ${i.Category}` : undefined
+              }))}
               value={stockItemId}
-              onChange={(e) => setStockItemId(e.target.value)}
-            >
-              <option value="">-- Select Item --</option>
-              {items.map((i: any) => (
-                <option key={i.Id || i.id} value={i.Id || i.id}>
-                  {i.Name || i.ItemCode} ({i.Category})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setStockItemId(val)}
+              placeholder="Search/Select Item..."
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
