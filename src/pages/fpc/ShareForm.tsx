@@ -3,6 +3,7 @@ import { ArrowLeft, Save, FileText, RefreshCw } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 
 export function ShareForm() {
   const navigate = useNavigate();
@@ -216,23 +217,21 @@ export function ShareForm() {
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading members...
                     </span>
                   ) : (
-                    <select 
-                      required 
-                      value={memberId}
-                      onChange={(e) => setMemberId(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
-                    >
-                      <option value="">Select Member...</option>
-                      {members.map(m => {
+                    <AutocompleteCombobox
+                      options={members.map(m => {
                         const mid = m.Id ?? m.id;
                         const sharesCount = m.SharesAllocated || m.sharesallocated || 0;
-                        return (
-                          <option key={mid} value={mid}>
-                            {m.FarmerName} ({m.MemberId || `M-${mid}`}) {transactionType !== 'Allotment' ? `[Has ${sharesCount} shares]` : ''}
-                          </option>
-                        );
+                        return {
+                          value: String(mid),
+                          label: `${m.FarmerName || ''} (${m.MemberId || `M-${mid}`})`,
+                          sublabel: `${transactionType !== 'Allotment' ? `Shares: ${sharesCount} | ` : ''}${m.Village ? `Village: ${m.Village}` : ''}`
+                        };
                       })}
-                    </select>
+                      value={memberId}
+                      onChange={setMemberId}
+                      placeholder="Search/Select Member..."
+                      required={true}
+                    />
                   )}
                 </div>
               </div>
@@ -265,22 +264,22 @@ export function ShareForm() {
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading targets...
                       </span>
                     ) : (
-                      <select 
-                        required 
+                      <AutocompleteCombobox
+                        options={members
+                          .filter(m => String(m.Id ?? m.id) !== String(memberId))
+                          .map(m => {
+                            const mid = m.Id ?? m.id;
+                            return {
+                              value: String(mid),
+                              label: `${m.FarmerName || ''} (${m.MemberId || `M-${mid}`})`,
+                              sublabel: m.Village ? `Village: ${m.Village}` : undefined
+                            };
+                          })}
                         value={toMemberId}
-                        onChange={(e) => setToMemberId(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
-                      >
-                        <option value="">Select Target...</option>
-                        {members.map(m => {
-                          const mid = m.Id ?? m.id;
-                          return (
-                            <option key={mid} value={mid} disabled={String(mid) === String(memberId)}>
-                              {m.FarmerName} ({m.MemberId || `M-${mid}`})
-                            </option>
-                          );
-                        })}
-                      </select>
+                        onChange={setToMemberId}
+                        placeholder="Search/Select Target..."
+                        required={true}
+                      />
                     )
                   ) : (
                     <span className="text-xs text-slate-400 pl-3">

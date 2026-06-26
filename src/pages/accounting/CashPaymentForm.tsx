@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, Loader2, Calendar, DollarSign, Edit, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
@@ -244,23 +245,20 @@ export function CashPaymentForm() {
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
               Credit Account (Paid From) <span className="text-red-500">*</span>
             </label>
-            <select
-              id="select-cash-account"
-              value={cashAccountId}
-              onChange={e => setCashAccountId(e.target.value ? Number(e.target.value) : '')}
-              required
-              className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
-            >
-              <option value="">-- Choose Cash Ledger Account --</option>
-              {cashAccounts.map(acc => {
+            <AutocompleteCombobox
+              options={cashAccounts.map(acc => {
                 const accId = acc.Id || acc.id;
-                return (
-                  <option key={accId} value={accId}>
-                    {acc.Name} ({acc.AccountGroup})
-                  </option>
-                );
+                return {
+                  value: String(accId),
+                  label: acc.Name || '',
+                  sublabel: acc.AccountGroup
+                };
               })}
-            </select>
+              value={cashAccountId ? String(cashAccountId) : ''}
+              onChange={val => setCashAccountId(val ? Number(val) : '')}
+              placeholder="Search/Select Cash Account..."
+              required={true}
+            />
           </div>
 
           {/* Target Account Selection (Debit) */}
@@ -268,23 +266,20 @@ export function CashPaymentForm() {
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
               Debit Account (Paid To) <span className="text-red-500">*</span>
             </label>
-            <select
-              id="select-debit-account"
-              value={accountId}
-              onChange={e => setAccountId(e.target.value ? Number(e.target.value) : '')}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-medium text-gray-900"
-            >
-              <option value="">-- Choose General Ledger Account --</option>
-              {generalAccounts.map(acc => {
+            <AutocompleteCombobox
+              options={generalAccounts.map(acc => {
                 const accId = acc.Id || acc.id;
-                return (
-                  <option key={accId} value={accId}>
-                    {acc.Name} ({acc.AccountGroup})
-                  </option>
-                );
+                return {
+                  value: String(accId),
+                  label: acc.Name || '',
+                  sublabel: acc.AccountGroup
+                };
               })}
-            </select>
+              value={accountId ? String(accountId) : ''}
+              onChange={val => setAccountId(val ? Number(val) : '')}
+              placeholder="Search/Select Debit Account..."
+              required={true}
+            />
           </div>
 
           {/* Amount field */}

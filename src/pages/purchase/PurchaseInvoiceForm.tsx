@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { formatDateForInput } from '../../lib/utils';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 
 interface InvoiceLine {
   id: string;
@@ -291,19 +292,17 @@ export function PurchaseInvoiceForm() {
                   Vendor Name <span className="text-red-500 ml-1">*</span>
                 </div>
                 <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
-                  <select 
-                    required
+                  <AutocompleteCombobox
+                    options={vendors.map(v => ({
+                      value: String(v.Vendor_ID || v.id || ''),
+                      label: `${v.Vendor_NAME || ''}${v.registration_no ? ` (${v.registration_no})` : ''}`,
+                      sublabel: v.Vendor_address || v.Address || undefined
+                    }))}
                     value={selectedVendorId}
-                    onChange={e => setSelectedVendorId(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
-                  >
-                    <option value="">Select Vendor...</option>
-                    {vendors.map(v => (
-                      <option key={v.Vendor_ID} value={v.Vendor_ID}>
-                        {v.Vendor_NAME} {v.registration_no ? `(${v.registration_no})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedVendorId}
+                    placeholder="Search/Select Vendor..."
+                    required={true}
+                  />
                 </div>
               </div>
 
@@ -376,27 +375,23 @@ export function PurchaseInvoiceForm() {
                     return (
                       <tr key={line.id} className="bg-white hover:bg-slate-50">
                         <td className="p-2 w-96 border-r border-blue-900">
-                          <input 
-                            required
-                            type="text" 
-                            list={`items-${line.id}`}
-                            placeholder="Select or type item..." 
+                          <AutocompleteCombobox
+                            options={inventoryItems.map(item => ({
+                              value: String(item.Name || item.name || ''),
+                              label: item.Name || item.name || '',
+                              sublabel: item.Code || item.ItemCode ? `Code: ${item.Code || item.ItemCode}` : undefined
+                            }))}
                             value={line.item}
-                            onChange={e => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               updateLine(line.id, 'item', val);
                               const item = inventoryItems.find(i => (i.Name || i.name) === val);
                               if (item) {
                                 selectItem(line.id, item);
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                            placeholder="Select item..."
+                            required={true}
                           />
-                          <datalist id={`items-${line.id}`}>
-                            {inventoryItems.map(item => (
-                              <option key={item.Id || item.id || item.ID} value={item.Name || item.name} />
-                            ))}
-                          </datalist>
                         </td>
                         <td className="p-2 w-28 border-r border-blue-900">
                           <input 

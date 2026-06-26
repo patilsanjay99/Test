@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Plus, Trash2, BookOpen, Loader2, Info } from 'lucide-r
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 
 interface Account {
   Id: number;
@@ -376,17 +377,17 @@ export function JournalEntryForm() {
                   {lines.map((line) => (
                     <tr key={line.id} className="bg-white hover:bg-slate-50 transition-colors">
                       <td className="p-2 border-r border-blue-900">
-                        <select 
-                          required
+                        <AutocompleteCombobox
+                          options={accounts.map(acc => ({
+                            value: String(acc.Id || acc.id || ''),
+                            label: `${acc.AccountCode ? `${acc.AccountCode} - ` : ''}${acc.Name || ''}`,
+                            sublabel: acc.AccountGroup
+                          }))}
                           value={line.AccountId}
-                          onChange={(e) => updateLine(line.id, 'AccountId', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer text-gray-900 font-medium"
-                        >
-                          <option value="">Select Account...</option>
-                          {accounts.map(acc => (
-                            <option key={acc.Id} value={acc.Id}>{acc.AccountCode} - {acc.Name}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => updateLine(line.id, 'AccountId', val)}
+                          placeholder="Search Account..."
+                          required={true}
+                        />
                       </td>
                       <td className="p-2 border-r border-blue-900">
                          <input 

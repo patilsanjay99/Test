@@ -3460,11 +3460,48 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
     }
   });
 
+  async function ensureDefaultAccountsForCompany(companyId: number) {
+    try {
+       const checkQuery = `SELECT COUNT(*) as cnt FROM Accounts WHERE CompanyId = ?`;
+       const result = await executeQuery(checkQuery, [companyId]);
+       const count = result && result[0] ? (result[0].cnt || result[0].CNT || 0) : 0;
+       if (count === 0) {
+           console.log(`[Auto-Seed] No chart of accounts found for companyId ${companyId}. Seeding default accounts...`);
+           const defaultAccounts = [
+               { code: '1001', name: 'Cash in Hand', group: 'Cash-in-Hand', type: 'Asset', bal: 10000, btype: 'Dr' },
+               { code: '1002', name: 'State Bank of India', group: 'Bank Accounts', type: 'Asset', bal: 500000, btype: 'Dr' },
+               { code: '3001', name: 'Share Capital', group: 'Capital Account', type: 'Equity', bal: 510000, btype: 'Cr' },
+               { code: '4001', name: 'Sales Account', group: 'Sales Accounts', type: 'Revenue', bal: 0, btype: 'Cr' },
+               { code: '5001', name: 'Purchase Account', group: 'Purchase Accounts', type: 'Expense', bal: 0, btype: 'Dr' },
+               { code: '5002', name: 'Salary & Wages', group: 'Indirect Expenses', type: 'Expense', bal: 0, btype: 'Dr' },
+               { code: '5003', name: 'Office Rent', group: 'Indirect Expenses', type: 'Expense', bal: 0, btype: 'Dr' },
+               { code: '5004', name: 'General Expenses', group: 'Indirect Expenses', type: 'Expense', bal: 0, btype: 'Dr' }
+           ];
+           for (const item of defaultAccounts) {
+               await executeQuery(
+                   `INSERT INTO Accounts (CompanyId, AccountCode, Name, AccountGroup, AccountType, OpeningBalance, BalanceType) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                   [companyId, item.code, item.name, item.group, item.type, item.bal, item.btype]
+               );
+           }
+           console.log(`[Auto-Seed] Seeding of default accounts completed successfully for companyId ${companyId}.`);
+       }
+    } catch (err: any) {
+       console.error(`[Auto-Seed Error] Failed to seed default accounts for companyId ${companyId}:`, err.message);
+    }
+  }
+
   apiRouter.get("/data/:table", async (req, res) => {
     try {
       const table = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
       const companyId = req.query.CompanyId;
       const financialYearId = req.query.FinancialYearId;
+
+      if (table.toLowerCase() === 'accounts' && companyId && companyId !== 'null' && companyId !== 'undefined' && companyId !== '') {
+          const parsedCompanyId = parseInt(String(companyId), 10);
+          if (!isNaN(parsedCompanyId)) {
+              await ensureDefaultAccountsForCompany(parsedCompanyId);
+          }
+      }
       
       let query = `SELECT * FROM ${table}`;
       const params: any[] = [];

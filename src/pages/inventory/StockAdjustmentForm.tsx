@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { formatDateForInput } from '../../lib/utils';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 
 interface AdjustmentItem {
   id: string;
@@ -245,19 +246,20 @@ export function StockAdjustmentForm() {
                   {items.map((item) => (
                     <tr key={item.id} className="bg-white hover:bg-slate-50">
                       <td className="p-2 border-r border-blue-900">
-                        <select 
+                        <AutocompleteCombobox
+                          options={inventoryItems.map(inv => ({
+                            value: String(inv.Id || inv.id || ''),
+                            label: inv.Name || '',
+                            sublabel: inv.Code ? `Code: ${inv.Code}` : undefined
+                          }))}
                           value={item.itemId}
-                          onChange={(e) => {
-                            const itm = inventoryItems.find(i => String(i.Id || i.id) === e.target.value);
+                          onChange={(val) => {
+                            const itm = inventoryItems.find(i => String(i.Id || i.id) === val);
                             if (itm) selectItemForLine(item.id, itm);
                           }}
-                          className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
-                        >
-                           <option value="">Select Item...</option>
-                           {inventoryItems.map(inv => (
-                             <option key={inv.Id || inv.id} value={inv.Id || inv.id}>{inv.Name}</option>
-                           ))}
-                        </select>
+                          placeholder="Search Item..."
+                          required={true}
+                        />
                       </td>
                       <td className="p-2 w-48 border-r border-blue-900 font-sans">
                         <select 

@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 import { formatDateForInput } from '../../lib/utils';
 
 interface ReturnLine {
@@ -286,19 +287,17 @@ export function PurchaseReturnForm() {
                   Vendor Name <span className="text-red-500 ml-1">*</span>
                 </div>
                 <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center col-span-2">
-                  <select 
-                    required
+                  <AutocompleteCombobox
+                    options={vendors.map(v => ({
+                      value: String(v.Vendor_ID || v.id || v.Id || ''),
+                      label: `${v.Vendor_NAME || ''}${v.PAN ? ` (PAN: ${v.PAN})` : ''}`,
+                      sublabel: v.Vendor_address || v.Address || undefined
+                    }))}
                     value={selectedVendorId}
-                    onChange={e => setSelectedVendorId(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer"
-                  >
-                    <option value="">Select Vendor...</option>
-                    {vendors.map(v => (
-                      <option key={v.Vendor_ID || v.id || v.Id} value={v.Vendor_ID || v.id || v.Id}>
-                        {v.Vendor_NAME} {v.PAN ? `(PAN: ${v.PAN})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedVendorId}
+                    placeholder="Search/Select Vendor..."
+                    required={true}
+                  />
                 </div>
               </div>
               
@@ -379,27 +378,23 @@ export function PurchaseReturnForm() {
                     return (
                       <tr key={line.id} className="bg-white hover:bg-slate-50">
                         <td className="p-2 border-r border-blue-900">
-                          <input 
-                            required
-                            type="text" 
-                            list={`items-${line.id}`}
-                            placeholder="Select or type item..." 
+                          <AutocompleteCombobox
+                            options={inventoryItems.map(item => ({
+                              value: String(item.Name || item.name || ''),
+                              label: item.Name || item.name || '',
+                              sublabel: item.Code || item.ItemCode ? `Code: ${item.Code || item.ItemCode}` : undefined
+                            }))}
                             value={line.item}
-                            onChange={e => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               updateLine(line.id, 'item', val);
                               const found = inventoryItems.find(i => (i.Name || i.name) === val);
                               if (found) {
                                 selectItem(line.id, found);
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
+                            placeholder="Select item..."
+                            required={true}
                           />
-                          <datalist id={`items-${line.id}`}>
-                            {inventoryItems.map(item => (
-                              <option key={item.Id || item.id || item.ID} value={item.Name || item.name} />
-                            ))}
-                          </datalist>
                         </td>
                         <td className="p-2 w-48 border-r border-blue-900">
                           <select

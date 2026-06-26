@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, Loader2, Calendar, DollarSign, Edit, AlertCircle, Hash } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
@@ -224,38 +225,40 @@ export function BankReceiptForm() {
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
               Bank Account (Debited) <span className="text-red-500">*</span>
             </label>
-            <select
-              value={bankAccountId}
-              onChange={e => setBankAccountId(Number(e.target.value))}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-medium"
-            >
-              <option value="">-- Choose Account --</option>
-              {bankAccounts.map(acc => (
-                <option key={acc.Id || acc.id} value={acc.Id || acc.id}>
-                  {acc.Name} ({acc.AccountGroup})
-                </option>
-              ))}
-            </select>
+            <AutocompleteCombobox
+              options={bankAccounts.map(acc => {
+                const accId = acc.Id || acc.id;
+                return {
+                  value: String(accId),
+                  label: acc.Name || '',
+                  sublabel: acc.AccountGroup
+                };
+              })}
+              value={bankAccountId ? String(bankAccountId) : ''}
+              onChange={val => setBankAccountId(val ? Number(val) : '')}
+              placeholder="Search/Select Bank Account..."
+              required={true}
+            />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
               Credit Account (Received From) <span className="text-red-500">*</span>
             </label>
-            <select
-              value={accountId}
-              onChange={e => setAccountId(Number(e.target.value))}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-medium"
-            >
-              <option value="">-- Choose Account --</option>
-              {generalAccounts.map(acc => (
-                <option key={acc.Id || acc.id} value={acc.Id || acc.id}>
-                  {acc.Name} - {acc.AccountGroup}
-                </option>
-              ))}
-            </select>
+            <AutocompleteCombobox
+              options={generalAccounts.map(acc => {
+                const accId = acc.Id || acc.id;
+                return {
+                  value: String(accId),
+                  label: acc.Name || '',
+                  sublabel: acc.AccountGroup
+                };
+              })}
+              value={accountId ? String(accountId) : ''}
+              onChange={val => setAccountId(val ? Number(val) : '')}
+              placeholder="Search/Select Credit Account..."
+              required={true}
+            />
           </div>
 
           <div className="space-y-1.5 md:col-span-2 bg-gray-50 p-6 rounded-xl border border-gray-100 mt-2">

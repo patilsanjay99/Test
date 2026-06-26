@@ -17,6 +17,7 @@ import { exportToCSV } from '../../lib/utils';
 import { formatDate } from '../../utils/dateFormatter';
 import { useAppContext } from '../../context/AppContext';
 import { CustomDatePicker } from '../../components/CustomDatePicker';
+import { AutocompleteCombobox } from '../../components/AutocompleteCombobox';
 import { AuditLogs } from '../settings/AuditLogs';
 
 const reportCategories = [
@@ -1126,18 +1127,16 @@ export function Reports() {
                   <>
                   <div className="flex flex-col min-w-[200px]">
                     <label className="text-xs font-semibold text-gray-600 mb-1">Inventory Item</label>
-                    <select 
-                      value={stockItemId} 
-                      onChange={e => setStockItemId(e.target.value)} 
-                      className="px-3 py-1.5 border border-gray-300 rounded text-sm bg-white"
-                    >
-                      <option value="">Select Item...</option>
-                      {inventory.map(item => (
-                        <option key={item.Id || item.id || item.ItemId || item.ItemCode} value={item.Id || item.id || item.ItemId || item.ItemCode}>
-                          {item.Name || item.ItemName}
-                        </option>
-                      ))}
-                    </select>
+                    <AutocompleteCombobox
+                      options={inventory.map(item => ({
+                        value: String(item.Id || item.id || item.ItemId || item.ItemCode || ''),
+                        label: item.Name || item.ItemName || '',
+                        sublabel: item.Code || item.ItemCode ? `Code: ${item.Code || item.ItemCode}` : undefined
+                      }))}
+                      value={stockItemId}
+                      onChange={setStockItemId}
+                      placeholder="Search/Select Item..."
+                    />
                   </div>
                   <div className="flex flex-col min-w-[200px]">
                     <label className="text-xs font-semibold text-gray-600 mb-1">Location</label>
