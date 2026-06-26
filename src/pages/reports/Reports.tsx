@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   FileText, 
   BarChart2, 
@@ -124,12 +124,15 @@ export function Reports() {
 
   const [ledgerSearch, setLedgerSearch] = useState<string>('');
   const [isLedgerDropdownOpen, setIsLedgerDropdownOpen] = useState<boolean>(false);
+  const ledgerDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (ledgerAccId && accounts.length > 0) {
       const activeAcc = accounts.find(a => String(a.Id || a.id) === String(ledgerAccId));
       if (activeAcc) {
-        setLedgerSearch(`${activeAcc.Name} (${activeAcc.AccountCode || 'No Code'})`);
+        const name = activeAcc.Name || activeAcc.name || '';
+        const code = activeAcc.AccountCode || activeAcc.accountcode || '';
+        setLedgerSearch(code ? `${name} (${code})` : name);
       } else {
         setLedgerSearch('');
       }
@@ -138,10 +141,36 @@ export function Reports() {
     }
   }, [ledgerAccId, accounts]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ledgerDropdownRef.current && !ledgerDropdownRef.current.contains(event.target as Node)) {
+        setIsLedgerDropdownOpen(false);
+        // Reset search to active label if it was changed
+        if (ledgerAccId && accounts.length > 0) {
+          const activeAcc = accounts.find(a => String(a.Id || a.id) === String(ledgerAccId));
+          if (activeAcc) {
+            const name = activeAcc.Name || activeAcc.name || '';
+            const code = activeAcc.AccountCode || activeAcc.accountcode || '';
+            setLedgerSearch(code ? `${name} (${code})` : name);
+          } else {
+            setLedgerSearch('');
+          }
+        } else {
+          setLedgerSearch('');
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [accounts, ledgerAccId]);
+
   const filteredAccounts = useMemo(() => {
     const sorted = [...accounts].sort((a, b) => {
-      const nameA = (a.Name || '').toLowerCase();
-      const nameB = (b.Name || '').toLowerCase();
+      const nameA = (a.Name || a.name || '').toLowerCase();
+      const nameB = (b.Name || b.name || '').toLowerCase();
       return nameA.localeCompare(nameB);
     });
 
@@ -149,16 +178,17 @@ export function Reports() {
 
     const query = ledgerSearch.toLowerCase();
     const activeAcc = accounts.find(a => String(a.Id || a.id) === String(ledgerAccId));
-    const activeLabel = activeAcc ? `${activeAcc.Name} (${activeAcc.AccountCode || 'No Code'})` : '';
+    const activeLabel = activeAcc ? `${activeAcc.Name || activeAcc.name || ''} (${activeAcc.AccountCode || activeAcc.accountcode || 'No Code'})` : '';
     
-    if (ledgerSearch === activeLabel) {
+    if (ledgerSearch === activeLabel || (activeAcc && ledgerSearch === (activeAcc.Name || activeAcc.name || ''))) {
       return sorted;
     }
 
     return sorted.filter(acc => {
-      const name = (acc.Name || '').toLowerCase();
-      const code = (acc.AccountCode || '').toLowerCase();
-      return name.includes(query) || code.includes(query);
+      const name = (acc.Name || acc.name || '').toLowerCase();
+      const code = (acc.AccountCode || acc.accountcode || '').toLowerCase();
+      const group = (acc.AccountGroup || acc.AccountGroupName || acc.accountgroup || '').toLowerCase();
+      return name.includes(query) || code.includes(query) || group.includes(query);
     });
   }, [accounts, ledgerSearch, ledgerAccId]);
 
@@ -1007,7 +1037,7 @@ export function Reports() {
             {(selectedReport.name === 'Ledger Account Statement' || selectedReport.name === 'Location wise Stock Ledger' || selectedReport.name === 'Sales Register' || selectedReport.name === 'Sales Returns Register' || selectedReport.name === 'Purchase Register' || selectedReport.name === 'Purchase Returns Register' || selectedReport.name === 'Trial Balance' || selectedReport.name === 'Balance Sheet' || selectedReport.name === 'Profit & Loss Statement') && (
               <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap gap-4 items-center print:hidden relative z-40">
                 {selectedReport.name === 'Ledger Account Statement' && (
-                  <div className="flex flex-col relative w-72 z-30">
+                  <div ref={ledgerDropdownRef} className="flex flex-col relative w-72 z-30">
                     <label className="text-xs font-semibold text-gray-600 mb-1">General Ledger Account</label>
                     <div className="relative">
                       <input 
@@ -1058,49 +1088,37 @@ export function Reports() {
                     </div>
 
                     {isLedgerDropdownOpen && (
-                      <>
-                        <div 
-                          className="fixed inset-0 z-10" 
-                          onClick={() => {
-                            setIsLedgerDropdownOpen(false);
-                            const activeAcc = accounts.find(a => String(a.Id || a.id) === String(ledgerAccId));
-                            if (activeAcc) {
-                              setLedgerSearch(`${activeAcc.Name} (${activeAcc.AccountCode || 'No Code'})`);
-                            } else {
-                              setLedgerSearch('');
-                            }
-                          }} 
-                        />
-                        
-                        <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20 py-1">
-                          {filteredAccounts.length === 0 ? (
-                            <div className="px-3 py-2 text-xs text-gray-500 italic">No accounts found</div>
-                          ) : (
-                            filteredAccounts.map(acc => {
-                              const isSelected = String(acc.Id || acc.id) === String(ledgerAccId);
-                              return (
-                                <button
-                                  key={acc.Id || acc.id}
-                                  type="button"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setLedgerAccId(String(acc.Id || acc.id));
-                                    setIsLedgerDropdownOpen(false);
-                                  }}
-                                  className={`w-full text-left px-3 py-2 text-xs transition-colors flex flex-col ${
-                                    isSelected 
-                                      ? 'bg-blue-50 text-blue-700 font-medium' 
-                                      : 'hover:bg-gray-50 text-gray-700'
-                                  }`}
-                                >
-                                  <span className="font-semibold">{acc.Name}</span>
-                                  <span className="text-[10px] text-gray-400 mt-0.5">Code: {acc.AccountCode || 'No Code'} | Group: {acc.AccountGroupName || 'General'}</span>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      </>
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20 py-1">
+                        {filteredAccounts.length === 0 ? (
+                          <div className="px-3 py-2 text-xs text-gray-500 italic">No accounts found</div>
+                        ) : (
+                          filteredAccounts.map(acc => {
+                            const isSelected = String(acc.Id || acc.id) === String(ledgerAccId);
+                            const name = acc.Name || acc.name || '';
+                            const code = acc.AccountCode || acc.accountcode || '';
+                            const group = acc.AccountGroup || acc.AccountGroupName || acc.accountgroup || 'General';
+                            return (
+                              <button
+                                key={acc.Id || acc.id}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setLedgerAccId(String(acc.Id || acc.id));
+                                  setIsLedgerDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs transition-colors flex flex-col ${
+                                  isSelected 
+                                    ? 'bg-blue-50 text-blue-700 font-medium' 
+                                    : 'hover:bg-gray-50 text-gray-700'
+                                }`}
+                              >
+                                <span className="font-semibold">{name}</span>
+                                <span className="text-[10px] text-gray-400 mt-0.5">Code: {code || 'No Code'} | Group: {group}</span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
