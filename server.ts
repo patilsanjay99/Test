@@ -1860,8 +1860,8 @@ Please inspect and verify the following potential causes:
       addFilesToZip(process.cwd(), zip);
       
       res.attachment('fpc-source-code.zip');
-      const stream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true });
-      stream.pipe(res);
+      const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      res.send(buffer);
     } catch (err: any) {
       res.status(500).send({error: err.message});
     }
@@ -2083,8 +2083,8 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       zip.file('README_DEPLOY.md', readmeContent);
       
       res.attachment('fpc-cloud-deployment-package.zip');
-      const stream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true });
-      stream.pipe(res);
+      const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      res.send(buffer);
     } catch (err: any) {
       res.status(500).send({ error: err.message });
     }
@@ -3498,7 +3498,11 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       try {
         rows = await executeQuery(query, params);
       } catch (innerE: any) {
-        if (innerE.message && innerE.message.includes(`Invalid object name '${table}'`)) {
+        const isTableMissing = innerE.message && (
+          innerE.message.includes(`Invalid object name '${table}'`) ||
+          (innerE.message.toLowerCase().includes("invalid object name") && innerE.message.toLowerCase().includes(table.toLowerCase()))
+        );
+        if (isTableMissing) {
             console.log(`[Auto-Heal-Get] Table '${table}' missing. Creating...`);
             await ensureTableCreatedInMSSQL(table);
             rows = await executeQuery(query, params);
@@ -3531,7 +3535,11 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
       try {
         rows = await executeQuery(`SELECT * FROM ${table} WHERE ${pkCol} = ?`, [searchId]);
       } catch (innerE: any) {
-        if (innerE.message && innerE.message.includes(`Invalid object name '${table}'`)) {
+        const isTableMissing = innerE.message && (
+          innerE.message.includes(`Invalid object name '${table}'`) ||
+          (innerE.message.toLowerCase().includes("invalid object name") && innerE.message.toLowerCase().includes(table.toLowerCase()))
+        );
+        if (isTableMissing) {
             console.log(`[Auto-Heal-GetId] Table '${table}' missing. Creating...`);
             await ensureTableCreatedInMSSQL(table);
             rows = await executeQuery(`SELECT * FROM ${table} WHERE ${pkCol} = ?`, [searchId]);
