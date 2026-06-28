@@ -75,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      if (user?.role === 'Super Admin' || user?.Role === 'Super Admin') return true;
      
      if (path === '/') return true; // dashboard accessible to all
-     if (path.startsWith('/e-tracker')) return true; // E-tracker is for all roles to view and manage tickets
 
      const defaultPermissions: Record<string, { view: boolean; add: boolean; edit: boolean; delete: boolean }> = {
        'Master Data: Company Details': { view: true, add: false, edit: false, delete: false },
@@ -110,6 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        'Accounting: Cash Receipts': { view: true, add: false, edit: false, delete: false },
        'Accounting: Bank Receipts': { view: true, add: false, edit: false, delete: false },
        'MIS & Reports: MIS & Reports': { view: true, add: false, edit: false, delete: false },
+       'E-Tracker: Dashboard': { view: true, add: false, edit: false, delete: false },
+       'E-Tracker: Ticket Management': { view: true, add: true, edit: true, delete: true },
+       'E-Tracker: Status Configuration': { view: true, add: true, edit: true, delete: true },
        'Settings: Settings': { view: true, add: true, edit: true, delete: true },
      };
 
@@ -163,6 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        else if (path.startsWith('/accounting') && path.includes('bank-receipts')) key = 'Accounting: Bank Receipts';
        else if (path.startsWith('/accounting') && path.includes('receipts')) key = 'Accounting: Cash Receipts';
        else if (path.startsWith('/reports')) key = 'MIS & Reports: MIS & Reports';
+       else if (path.startsWith('/e-tracker/issues')) key = 'E-Tracker: Ticket Management';
+       else if (path.startsWith('/e-tracker/statuses')) key = 'E-Tracker: Status Configuration';
+       else if (path.startsWith('/e-tracker')) key = 'E-Tracker: Dashboard';
        else if (path.startsWith('/settings')) key = 'Settings: Settings';
        else if (path.startsWith('/user-manual')) return true;
 

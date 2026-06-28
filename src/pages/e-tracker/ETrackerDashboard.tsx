@@ -32,10 +32,12 @@ import {
   Area 
 } from 'recharts';
 import { useAppContext } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export function ETrackerDashboard() {
   const navigate = useNavigate();
   const { activeCompany } = useAppContext();
+  const { t, language } = useLanguage();
 
   // Metrics States
   const [issues, setIssues] = useState<any[]>([]);
@@ -110,6 +112,48 @@ export function ETrackerDashboard() {
   const delayedCount = issues.filter(isSlaBreached).length;
 
   // Chart Data Generation (Department distribution)
+  const translateDept = (deptName: string) => {
+    const mapEnToMr: Record<string, string> = {
+      'Operations': 'ऑपरेशन्स',
+      'Sales': 'विक्री',
+      'Purchase': 'खरेदी',
+      'IT & Infrastructure': 'आयटी आणि इन्फ्रा',
+      'Accounting & Payroll': 'अकाउंटिंग आणि पेरोल',
+      'HR & Administration': 'एचआर आणि प्रशासन',
+      'Customer Support': 'ग्राहक सहाय्य',
+      'FPC Logistics': 'लॉजिस्टिक्स'
+    };
+    const mapEnToHi: Record<string, string> = {
+      'Operations': 'संचालन',
+      'Sales': 'ब्री',
+      'Purchase': 'खरीद',
+      'IT & Infrastructure': 'आईटी और इन्फ्रा',
+      'Accounting & Payroll': 'लेखा और पेरोल',
+      'HR & Administration': 'एचआर और प्रशासन',
+      'Customer Support': 'ग्राहक सहायता',
+      'FPC Logistics': 'लॉजिस्टिक्स'
+    };
+    if (language === 'mr') return mapEnToMr[deptName] || deptName;
+    if (language === 'hi') return mapEnToHi[deptName] || deptName;
+    return deptName;
+  };
+
+  const translatePriority = (priority: string) => {
+    const mapEnToMr: Record<string, string> = {
+      'High': 'उच्च (High)',
+      'Medium': 'मध्यम (Medium)',
+      'Low': 'कमी (Low)'
+    };
+    const mapEnToHi: Record<string, string> = {
+      'High': 'उच्च (High)',
+      'Medium': 'मध्यम (Medium)',
+      'Low': 'कम (Low)'
+    };
+    if (language === 'mr') return mapEnToMr[priority] || priority;
+    if (language === 'hi') return mapEnToHi[priority] || priority;
+    return priority;
+  };
+
   const departments = ['Operations', 'Sales', 'Purchase', 'IT & Infrastructure', 'Accounting & Payroll', 'HR & Administration', 'Customer Support', 'FPC Logistics'];
   const departmentData = departments.map(d => {
     const subset = issues.filter(ticket => ticket.Department === d);
@@ -119,7 +163,7 @@ export function ETrackerDashboard() {
     }).length;
 
     return {
-      name: d.split(' ')[0], // abbreviation
+      name: translateDept(d),
       Total: subset.length,
       Active: openInDept
     };
@@ -127,10 +171,14 @@ export function ETrackerDashboard() {
 
   // Priority division (Donut/Pie Chart)
   const priorities = ['High', 'Medium', 'Low'];
-  const colors_priorityMap: any = { 'High': '#EF4444', 'Medium': '#F59E0B', 'Low': '#10B981' };
+  const colors_priorityMap: any = { 
+    'High': '#EF4444', 'Medium': '#F59E0B', 'Low': '#10B981',
+    'उच्च (High)': '#EF4444', 'मध्यम (Medium)': '#F59E0B', 'कमी (Low)': '#10B981',
+    'कम (Low)': '#10B981'
+  };
   const priorityData = priorities.map(p => {
     return {
-      name: p,
+      name: translatePriority(p),
       value: issues.filter(ticket => ticket.Priority === p).length
     };
   }).filter(p => p.value > 0);
@@ -159,16 +207,16 @@ export function ETrackerDashboard() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
             <Layers className="w-6 h-6 text-blue-600" id="ptrack-dash-icon" />
-            E-Tracker Analytics Centeral
+            {t('eTracker.analyticsTitle')}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Real-time indicators, SLA compliance maps, and accountability visualizer</p>
+          <p className="text-sm text-gray-500 mt-1">{t('eTracker.analyticsSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/e-tracker/issues')}
             className="px-4 py-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg text-xs font-bold text-gray-700 transition-all flex items-center gap-1 shadow-sm"
           >
-            Issues Ledger
+            {t('eTracker.issuesLedger')}
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button 
@@ -184,7 +232,7 @@ export function ETrackerDashboard() {
       {loading ? (
         <div className="bg-white border border-gray-200 rounded-xl p-16 text-center text-gray-500 flex flex-col items-center justify-center gap-2 shadow-sm">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-          <span className="text-sm font-semibold">Consolidating executive dashboards...</span>
+          <span className="text-sm font-semibold">{t('eTracker.loadingDashboard')}</span>
         </div>
       ) : (
         <>
@@ -194,9 +242,9 @@ export function ETrackerDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden flex items-center justify-between transition-all hover:scale-[1.01]">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Total Complaints & Tasks</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{t('eTracker.totalComplaints')}</span>
                 <div className="text-2xl font-extrabold text-gray-900 leading-none">{totalCount}</div>
-                <span className="text-[10px] text-gray-400 block font-semibold">Logged lifespans</span>
+                <span className="text-[10px] text-gray-400 block font-semibold">{t('eTracker.loggedLifespans')}</span>
               </div>
               <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
                 <Briefcase className="w-5 h-5" />
@@ -207,9 +255,9 @@ export function ETrackerDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden flex items-center justify-between transition-all hover:scale-[1.01]">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Unresolved (Active)</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{t('eTracker.unresolvedActive')}</span>
                 <div className="text-2xl font-extrabold text-amber-600 leading-none">{openCount}</div>
-                <span className="text-[10px] text-gray-400 block font-semibold">Under active processing</span>
+                <span className="text-[10px] text-gray-400 block font-semibold">{t('eTracker.underActiveProcessing')}</span>
               </div>
               <div className="p-3 bg-amber-50 text-amber-500 rounded-lg">
                 <Clock className="w-5 h-5" />
@@ -220,9 +268,9 @@ export function ETrackerDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden flex items-center justify-between transition-all hover:scale-[1.01]">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">SLA Breached (Delayed)</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{t('eTracker.slaBreached')}</span>
                 <div className="text-2xl font-extrabold text-red-600 leading-none animate-pulse">{delayedCount}</div>
-                <span className="text-[10px] text-red-600 block font-extrabold">Requires immediate escalation</span>
+                <span className="text-[10px] text-red-600 block font-extrabold">{t('eTracker.requiresImmediate')}</span>
               </div>
               <div className="p-3 bg-red-50 text-red-500 rounded-lg">
                 <AlertCircle className="w-5 h-5" />
@@ -233,9 +281,9 @@ export function ETrackerDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden flex items-center justify-between transition-all hover:scale-[1.01]">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500" />
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Resolved / Closed</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{t('eTracker.resolvedClosed')}</span>
                 <div className="text-2xl font-extrabold text-green-600 leading-none">{resolvedCount}</div>
-                <span className="text-[10px] text-gray-400 block font-semibold">Completed cycle</span>
+                <span className="text-[10px] text-gray-400 block font-semibold">{t('eTracker.completedCycle')}</span>
               </div>
               <div className="p-3 bg-green-50 text-green-500 rounded-lg">
                 <CheckCircle className="w-5 h-5" />
@@ -249,10 +297,10 @@ export function ETrackerDashboard() {
             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-gray-50 pb-2">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Departmental Ticket Division</h3>
-                  <p className="text-[11px] text-gray-400">Accountability distribution across active branches</p>
+                  <h3 className="text-sm font-bold text-gray-900">{t('eTracker.deptDivision')}</h3>
+                  <p className="text-[11px] text-gray-400">{t('eTracker.divisionSubtitle')}</p>
                 </div>
-                <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Bar summary</span>
+                <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">{t('eTracker.barSummary')}</span>
               </div>
               <div className="h-64">
                 {isMounted && (
@@ -275,10 +323,10 @@ export function ETrackerDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-gray-50 pb-2">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Priority division</h3>
-                  <p className="text-[11px] text-gray-400">Segmentation of critical divisions</p>
+                  <h3 className="text-sm font-bold text-gray-900">{t('eTracker.priorityDivision')}</h3>
+                  <p className="text-[11px] text-gray-400">{t('eTracker.segmentationSubtitle')}</p>
                 </div>
-                <span className="bg-amber-50 text-amber-700 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Donut</span>
+                <span className="bg-amber-50 text-amber-700 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">{t('eTracker.donut')}</span>
               </div>
               <div className="h-44 flex items-center justify-center relative">
                 {isMounted && priorityData.length > 0 ? (
@@ -315,7 +363,7 @@ export function ETrackerDashboard() {
                   const pct = totalCount > 0 ? ((count / totalCount) * 100).toFixed(0) : 0;
                   return (
                     <div key={p}>
-                      <span className="text-gray-400 font-medium block">{p}</span>
+                      <span className="text-gray-400 font-medium block">{translatePriority(p)}</span>
                       <strong className="text-gray-900 flex items-center justify-center gap-0.5 text-xs">
                         <span className="w-1.5 h-1.5 rounded-full mr-1 shrink-0" style={{ backgroundColor: colors_priorityMap[p] }} />
                         {count} ({pct}%)
@@ -360,9 +408,9 @@ export function ETrackerDashboard() {
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 text-red-700 flex items-center gap-1.5">
                     <ShieldAlert className="w-4 h-4 text-red-600 animate-pulse" />
-                    Immediate escalations & High Priority
+                    {t('eTracker.immediateActions')}
                   </h3>
-                  <p className="text-[11px] text-gray-400">Tickets that require instant assignments and resolution oversight</p>
+                  <p className="text-[11px] text-gray-400">{t('eTracker.criticalAlertsSubtitle')}</p>
                 </div>
                 <button
                   onClick={() => navigate('/e-tracker/issues')}

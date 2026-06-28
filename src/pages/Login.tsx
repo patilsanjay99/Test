@@ -29,7 +29,7 @@ export function Login() {
     if (success) {
       navigate('/');
     } else {
-      setError('Invalid email or password');
+      setError('Invalid credentials. Please verify your Email/Mobile and Password.');
     }
     setLoading(false);
   };
@@ -64,14 +64,15 @@ export function Login() {
             )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 font-semibold">
-                Email address
+                Email address or Mobile number
               </label>
               <div className="mt-1">
                 <input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="e.g. john@company.com or 9876543210"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

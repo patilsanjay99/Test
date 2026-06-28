@@ -1,0 +1,25 @@
+{
+  "short_name": "FPC ERP",
+  "name": "FPC Accounting & Operations ERP",
+  "description": "Comprehensive corporate ERP for Farmer Producer Companies (FPC) to manage Inventory, Assets, Banking, Members, and Double-Entry Accounting.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b8a1c",
+  "theme_color": "#0b8a1c",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["business", "finance", "productivity"]
+}

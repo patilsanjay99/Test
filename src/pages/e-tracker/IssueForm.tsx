@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -16,7 +16,8 @@ import {
   CheckCircle,
   XCircle,
   AlertOctagon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Camera
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +26,7 @@ export function IssueForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { activeCompany } = useAppContext();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const isEdit = isset(id);
 
@@ -47,7 +48,7 @@ export function IssueForm() {
   const [statusId, setStatusId] = useState<string>('');
   const [priority, setPriority] = useState('Medium');
   const [slaDeadline, setSlaDeadline] = useState('');
-  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
   const [approverRemarks, setApproverRemarks] = useState('');
   const [isApproved, setIsApproved] = useState<number>(0); // 0=Pending, 1=Approved, 2=Rejected
   const [escalatedCount, setEscalatedCount] = useState<number>(0);
@@ -55,6 +56,64 @@ export function IssueForm() {
   const [createdAt, setCreatedAt] = useState('');
   const [closedAt, setClosedAt] = useState('');
   const [createdBy, setCreatedBy] = useState('');
+
+  // Camera integration state and refs
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedFlash, setCapturedFlash] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const startCamera = async () => {
+    setShowCamera(true);
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please check permissions.");
+      setShowCamera(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      if (context) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+        const base64Image = canvasRef.current.toDataURL('image/jpeg', 0.8);
+        setAttachmentUrls(prev => [...prev, base64Image]);
+        
+        // Show flash animation for capturing confirmation
+        setCapturedFlash(true);
+        setTimeout(() => setCapturedFlash(false), 800);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
   // Local helper to check id
   function isset(val: any): boolean {
@@ -99,7 +158,19 @@ export function IssueForm() {
               setStatusId(ticket.StatusId ? String(ticket.StatusId) : '');
               setPriority(ticket.Priority || 'Medium');
               setSlaDeadline(ticket.SlaDeadline || '');
-              setAttachmentUrl(ticket.AttachmentUrl || '');
+              
+              let parsedUrls: string[] = [];
+              const rawUrl = ticket.AttachmentUrl || '';
+              if (rawUrl) {
+                try {
+                  parsedUrls = JSON.parse(rawUrl);
+                  if (!Array.isArray(parsedUrls)) parsedUrls = [rawUrl];
+                } catch (e) {
+                  parsedUrls = [rawUrl];
+                }
+              }
+              setAttachmentUrls(parsedUrls);
+
               setApproverRemarks(ticket.ApproverRemarks || '');
               setIsApproved(Number(ticket.IsApproved || 0));
               setEscalatedCount(Number(ticket.EscalatedCount || 0));
@@ -182,7 +253,7 @@ export function IssueForm() {
         StatusName: statusName,
         Priority: priority,
         SlaDeadline: slaDeadline,
-        AttachmentUrl: attachmentUrl.trim(),
+        AttachmentUrl: JSON.stringify(attachmentUrls),
         ApproverRemarks: approverRemarks.trim(),
         IsApproved: Number(isApproved),
         EscalatedCount: Number(escalatedCount),
@@ -220,7 +291,7 @@ export function IssueForm() {
           Remarks: isEdit ? `Ticket metadata modified. Current status: ${statusName}.` : 'Initial issue registration submitted.',
           OldStatus: isEdit ? statusName : 'NONE', // Simplify or retrieve old
           NewStatus: statusName,
-          AttachmentUrl: attachmentUrl.trim()
+          AttachmentUrl: JSON.stringify(attachmentUrls)
         };
 
         await fetch('/api/data/IssueLogs', {
@@ -362,6 +433,26 @@ export function IssueForm() {
     );
   }
 
+  if (!hasPermission('/e-tracker/issues', isEdit ? 'edit' : 'add')) {
+    return (
+      <div className="p-12 text-center text-gray-500 flex flex-col items-center justify-center gap-4">
+        <div className="bg-red-50 text-red-600 p-4 rounded-full border border-red-100">
+          <XCircle className="w-12 h-12 text-red-600" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Access Denied</h2>
+          <p className="text-sm text-gray-500 mt-1">You do not have permission to {isEdit ? 'edit' : 'create'} support tickets.</p>
+        </div>
+        <button
+          onClick={() => navigate('/e-tracker/issues')}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all animate-pulse"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Navigation & Title */}
@@ -497,33 +588,196 @@ export function IssueForm() {
                   className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]"
                 />
               </div>
+            </div>
 
-              {/* Document/Screenshot Attachment Reference */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">References / Screenshot Link</label>
-                <input
-                  type="text"
-                  value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
-                  placeholder="https://example.com/screenshot.png"
-                />
+            {/* Document/Screenshot Attachment Reference */}
+            <div 
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  Array.from(e.dataTransfer.files).forEach(file => {
+                    if (file.size > 10 * 1024 * 1024) {
+                      alert(`File ${file.name} exceeds 10MB limit.`);
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result) {
+                        setAttachmentUrls(prev => [...prev, ev.target!.result as string]);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  });
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`md:col-span-2 border border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 relative transition-all cursor-pointer ${
+                isDragging 
+                  ? 'border-blue-500 bg-blue-50/50 scale-[1.01] shadow-md' 
+                  : 'border-gray-300 bg-gray-50/50 hover:bg-gray-100/80 hover:border-blue-400'
+              }`}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    Array.from(e.target.files).forEach(file => {
+                      if (file.size > 10 * 1024 * 1024) {
+                        alert(`File ${file.name} exceeds 10MB limit.`);
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        if (ev.target?.result) {
+                          setAttachmentUrls(prev => [...prev, ev.target!.result as string]);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <div className="flex items-center gap-3 pointer-events-none">
+                <Paperclip className="w-6 h-6 text-blue-500" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-gray-700">Drag & Drop Documents or Click to Upload</span>
+                  <span className="text-xs text-gray-500">Supports PNG, JPG, PDF, ZIP (Max 10MB)</span>
+                </div>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent opening file picker
+                    startCamera();
+                  }}
+                  className="px-3 py-1.5 bg-white border border-gray-300 hover:border-blue-500 hover:text-blue-600 text-gray-700 rounded-md flex items-center justify-center gap-2 transition-all font-semibold text-xs shadow-sm cursor-pointer relative z-10 hover:shadow"
+                >
+                  <Camera className="w-4 h-4 text-blue-500" />
+                  Capture from Camera
+                </button>
               </div>
             </div>
 
-            {/* Quick Helper for Uploader Drag-and-drop simulation */}
-            <div className="border border-dashed border-gray-200 rounded-lg p-4 bg-gray-50/50 flex flex-col items-center justify-center gap-1">
-              <Paperclip className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-bold text-gray-700">Drag & Drop Documents or Click to Upload</span>
-              <span className="text-[10px] text-gray-500">Supports PNG, JPG, PDF, ZIP (Max 10MB)</span>
-              {attachmentUrl && (
-                <div className="mt-2 flex items-center bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded text-xs gap-1.5 max-w-full">
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  <span className="truncate flex-1 font-mono">{attachmentUrl}</span>
-                  <button type="button" onClick={() => setAttachmentUrl('')} className="text-blue-500 hover:text-blue-800 font-bold">&times;</button>
+            {/* List Uploaded Files */}
+            {attachmentUrls.length > 0 && (
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Attached Files</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {attachmentUrls.map((url, idx) => {
+                    const canDelete = !isEdit || createdBy === (user?.Name || user?.name || user?.Email) || user?.Role === 'Admin' || user?.role === 'Admin' || user?.Role === 'Supervisor' || user?.role === 'Supervisor' || user?.Role === 'Manager' || user?.role === 'Manager';
+                    return (
+                      <div key={idx} className="flex items-center bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded text-xs gap-2">
+                        <ImageIcon className="w-4 h-4 shrink-0 text-blue-500" />
+                        <span className="truncate flex-1 font-mono text-[11px]">
+                          {url.startsWith('data:image') ? `Camera_Capture_${idx + 1}.jpg` : url}
+                        </span>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => setAttachmentUrls(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-red-500 hover:text-red-700 font-bold shrink-0 p-1 hover:bg-red-50 rounded"
+                            title="Delete Attachment"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Camera View Modal/Section */}
+            {showCamera && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg space-y-4">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <Camera className="w-5 h-5 text-blue-600" />
+                      Multi-Image Camera Capture
+                    </h3>
+                    <button type="button" onClick={stopCamera} className="text-gray-500 hover:text-gray-800">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                    <canvas ref={canvasRef} className="hidden" />
+                    {capturedFlash && (
+                      <div className="absolute inset-0 bg-white/90 z-20 pointer-events-none transition-all duration-150 animate-pulse" />
+                    )}
+                  </div>
+
+                  {/* Captured Previews inside Modal */}
+                  {attachmentUrls.filter(u => u.startsWith('data:image')).length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-bold text-gray-500 block">
+                        Captured Photos ({attachmentUrls.filter(u => u.startsWith('data:image')).length}):
+                      </span>
+                      <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+                        {attachmentUrls.filter(u => u.startsWith('data:image')).map((url, idx) => (
+                          <div key={idx} className="relative w-12 h-12 rounded border border-gray-200 overflow-hidden shrink-0 shadow-sm bg-gray-50">
+                            <img src={url} alt={`Capture ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttachmentUrls(prev => prev.filter(item => item !== url));
+                              }}
+                              className="absolute top-0 right-0 bg-red-600 hover:bg-red-700 text-white p-0.5 rounded-bl shadow"
+                              title="Remove Photo"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-2">
+                    <span className="text-xs text-blue-600 font-semibold animate-pulse">
+                      Stream active. Keep capturing photos as needed.
+                    </span>
+                    <div className="flex gap-2 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={captureImage}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 transition-transform rounded-lg text-sm font-semibold text-white flex items-center gap-2 shadow-sm"
+                      >
+                        <Camera className="w-4 h-4" />
+                        Capture Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 active:scale-95 transition-transform rounded-lg text-sm font-semibold text-white flex items-center gap-1 shadow-sm"
+                      >
+                        Finish & Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
@@ -632,22 +886,26 @@ export function IssueForm() {
             </div>
           )}
 
-          {/* SLA Overview & Timeline */}
-          {attachmentUrl && (
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-xs space-y-2">
-              <span className="font-bold text-gray-800 block">Preview Reference attachment:</span>
-              <div className="border border-gray-200 rounded overflow-hidden">
-                {attachmentUrl.match(/\.(jpeg|jpg|gif|png)$/) != null ? (
-                  <img src={attachmentUrl} alt="Screenshot attachment" className="w-full h-auto object-contain max-h-48" referrerPolicy="no-referrer" />
-                ) : (
-                  <div className="p-4 bg-gray-50 text-center flex flex-col items-center gap-1">
-                    <FileText className="w-8 h-8 text-blue-500" />
-                    <span className="font-medium truncate max-w-full text-blue-700">{attachmentUrl}</span>
-                    <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="mt-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded font-bold text-[10px] flex items-center gap-1 transition-all">
-                       <Download className="w-3 h-3" /> External Document
-                    </a>
+          {/* Reference Previews */}
+          {attachmentUrls.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-xs space-y-3">
+              <span className="font-bold text-gray-800 block">Preview Reference Attachments:</span>
+              <div className="grid grid-cols-1 gap-4">
+                {attachmentUrls.map((url, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded overflow-hidden">
+                    {(url.match(/\.(jpeg|jpg|gif|png)$/i) != null || url.startsWith('data:image/')) ? (
+                      <img src={url} alt={`Attachment ${idx + 1}`} className="w-full h-auto object-contain max-h-48" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="p-4 bg-gray-50 text-center flex flex-col items-center gap-1">
+                        <FileText className="w-8 h-8 text-blue-500" />
+                        <span className="font-medium truncate max-w-full text-blue-700">{url}</span>
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded font-bold text-[10px] flex items-center gap-1 transition-all">
+                           <Download className="w-3 h-3" /> External Document
+                        </a>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}

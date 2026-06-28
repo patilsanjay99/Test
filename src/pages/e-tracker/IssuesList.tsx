@@ -23,11 +23,13 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export function IssuesList() {
   const navigate = useNavigate();
   const { activeCompany } = useAppContext();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const { t, language } = useLanguage();
 
   // Data States
   const [issues, setIssues] = useState<any[]>([]);
@@ -158,6 +160,21 @@ export function IssuesList() {
 
   // Filters application
   const filteredIssues = issues.filter(ticket => {
+    // Role based filtering: If the user is an Employee/ordinary user, they only see their assigned tickets or tickets they created
+    const userRole = (user?.Role || user?.role || 'Employee').toString().trim().toUpperCase();
+    const isAdminOrManager = ['SUPER ADMIN', 'ADMIN', 'SUPERVISOR', 'MANAGER', 'HR'].includes(userRole);
+    
+    if (!isAdminOrManager) {
+      const isAssignedToMe = (ticket.AssigneeId && String(ticket.AssigneeId) === String(user?.Id || user?.id)) || 
+                             (ticket.AssigneeName && user?.Name && ticket.AssigneeName.toLowerCase() === user.Name.toLowerCase());
+      const isCreatedByMe = (ticket.CreatedBy && user?.Name && ticket.CreatedBy.toLowerCase() === user.Name.toLowerCase()) || 
+                            (ticket.CreatedBy && user?.Email && ticket.CreatedBy.toLowerCase() === user.Email.toLowerCase()) ||
+                            (ticket.CreatedBy && user?.email && ticket.CreatedBy.toLowerCase() === user.email.toLowerCase());
+      if (!isAssignedToMe && !isCreatedByMe) {
+        return false;
+      }
+    }
+
     // Search filter
     const matchesSearch = 
       ticket.Title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,6 +215,48 @@ export function IssuesList() {
     return 0;
   });
 
+  const translateDept = (deptName: string) => {
+    const mapEnToMr: Record<string, string> = {
+      'Operations': 'ऑपरेशन्स',
+      'Sales': 'विक्री',
+      'Purchase': 'खरेदी',
+      'IT & Infrastructure': 'आयटी आणि इन्फ्रा',
+      'Accounting & Payroll': 'अकाउंटिंग आणि पेरोल',
+      'HR & Administration': 'एचआर आणि प्रशासन',
+      'Customer Support': 'ग्राहक सहाय्य',
+      'FPC Logistics': 'लॉजिस्टिक्स'
+    };
+    const mapEnToHi: Record<string, string> = {
+      'Operations': 'संचालन',
+      'Sales': 'बिक्री',
+      'Purchase': 'खरीद',
+      'IT & Infrastructure': 'आईटी और इन्फ्रा',
+      'Accounting & Payroll': 'लेखा और पेरोल',
+      'HR & Administration': 'एचआर और प्रशासन',
+      'Customer Support': 'ग्राहक सहायता',
+      'FPC Logistics': 'लॉजिस्टिक्स'
+    };
+    if (language === 'mr') return mapEnToMr[deptName] || deptName;
+    if (language === 'hi') return mapEnToHi[deptName] || deptName;
+    return deptName;
+  };
+
+  const translatePriority = (priority: string) => {
+    const mapEnToMr: Record<string, string> = {
+      'High': 'उच्च (High)',
+      'Medium': 'मध्यम (Medium)',
+      'Low': 'कमी (Low)'
+    };
+    const mapEnToHi: Record<string, string> = {
+      'High': 'उच्च (High)',
+      'Medium': 'मध्यम (Medium)',
+      'Low': 'कम (Low)'
+    };
+    if (language === 'mr') return mapEnToMr[priority] || priority;
+    if (language === 'hi') return mapEnToHi[priority] || priority;
+    return priority;
+  };
+
   return (
     <div className="space-y-6">
       {/* Top action block */}
@@ -205,36 +264,38 @@ export function IssuesList() {
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
             <CheckSquare className="w-6 h-6 text-blue-600" id="ptrack-title-icon" />
-            Issues & Support Tickets
+            {t('eTracker.issuesTitle')}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Audit, edit, assign, and expedite operational requests and incidents</p>
+          <p className="text-sm text-gray-500 mt-1">{t('eTracker.issuesSubtitle')}</p>
         </div>
-        <button
-          onClick={() => navigate('/e-tracker/issues/new')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-sm shrink-0 self-start md:self-auto"
-          id="btn-new-ticket"
-        >
-          <Plus className="w-4 h-4" />
-          Create Support Ticket
-        </button>
+        {hasPermission('/e-tracker/issues', 'add') && (
+          <button
+            onClick={() => navigate('/e-tracker/issues/new')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-sm shrink-0 self-start md:self-auto"
+            id="btn-new-ticket"
+          >
+            <Plus className="w-4 h-4" />
+            {t('eTracker.createTicket')}
+          </button>
+        )}
       </div>
 
       {/* Advanced Filters Bento Grid */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-4">
         <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">
           <Filter className="w-4 h-4 text-gray-500" />
-          Filter & Segment Tickets
+          {t('eTracker.filterSegment')}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search Summary */}
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Free Search Query</label>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('eTracker.freeSearch')}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by ID, title, notes, assignee..."
+                placeholder={t('eTracker.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-1.5 w-full border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -245,28 +306,28 @@ export function IssuesList() {
 
           {/* Department filter */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Responsibility Area</label>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('eTracker.responsibilityArea')}</label>
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="ALL">-- All Departments --</option>
+              <option value="ALL">{t('eTracker.allDepartments')}</option>
               {['Operations', 'Sales', 'Purchase', 'IT & Infrastructure', 'Accounting & Payroll', 'HR & Administration', 'Customer Support', 'FPC Logistics'].map(d => (
-                <option key={d} value={d}>{d}</option>
+                <option key={d} value={d}>{translateDept(d)}</option>
               ))}
             </select>
           </div>
 
           {/* Status filter */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Lifecycle Phase</label>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('eTracker.lifecyclePhase')}</label>
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="ALL">-- All Statuses --</option>
+              <option value="ALL">{t('eTracker.allStatuses')}</option>
               {statuses.map(s => (
                 <option key={s.Id || s.id} value={String(s.Id || s.id)}>{s.StatusName}</option>
               ))}
@@ -275,16 +336,16 @@ export function IssuesList() {
 
           {/* Priority filter */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Priority weight</label>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('eTracker.priorityWeight')}</label>
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="ALL">-- All Priorities --</option>
-              <option value="High">🔴 High Priority</option>
-              <option value="Medium">🟡 Medium Priority</option>
-              <option value="Low">🟢 Low Priority</option>
+              <option value="ALL">{t('eTracker.allPriorities')}</option>
+              <option value="High">🔴 {translatePriority('High')}</option>
+              <option value="Medium">🟡 {translatePriority('Medium')}</option>
+              <option value="Low">🟢 {translatePriority('Low')}</option>
             </select>
           </div>
         </div>
@@ -294,16 +355,16 @@ export function IssuesList() {
           <div className="flex items-center gap-4">
             {/* Sorting */}
             <div className="flex items-center gap-1.5">
-              <span className="text-gray-400 font-medium">Order by:</span>
+              <span className="text-gray-400 font-medium">{t('eTracker.sortBy')}:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="border-none bg-transparent hover:underline hover:text-blue-600 font-bold outline-none cursor-pointer p-0 text-gray-700"
               >
-                <option value="date_desc">Creation Date (Newest)</option>
-                <option value="date_asc">Creation Date (Oldest)</option>
-                <option value="priority_desc">Priority (High to Low)</option>
-                <option value="title">Summary Alphabetic</option>
+                <option value="date_desc">{t('eTracker.newestFirst')}</option>
+                <option value="date_asc">{t('eTracker.oldestFirst')}</option>
+                <option value="priority_desc">{t('eTracker.highestPriority')}</option>
+                <option value="title">{t('eTracker.alphabetical')}</option>
               </select>
             </div>
 
@@ -315,7 +376,7 @@ export function IssuesList() {
                 onChange={(e) => setShowDelayedOnly(e.target.checked)}
                 className="w-3.5 h-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
-              <span className="font-semibold text-xs">Show Delayed / SLA Breached Only</span>
+              <span className="font-semibold text-xs">{t('eTracker.delayedSlaOnly')}</span>
             </label>
           </div>
 
@@ -325,10 +386,10 @@ export function IssuesList() {
               className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-all flex items-center gap-1 text-[11px]"
               title="Refresh tickets board"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Reload List
+              <RefreshCw className="w-3.5 h-3.5" /> {language === 'mr' ? 'रीलोड लिस्ट' : language === 'hi' ? 'रीलोड लिस्ट' : 'Reload List'}
             </button>
             <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded font-bold">
-              {sortedIssues.length} matches
+              {sortedIssues.length} {language === 'mr' ? 'तिकीट जुळत आहे' : language === 'hi' ? 'टिकट मेल खा रहे हैं' : 'matches'}
             </span>
           </div>
         </div>
@@ -340,20 +401,20 @@ export function IssuesList() {
           {loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
               <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-              <span className="text-sm font-medium">Synchronizing tickets ledger...</span>
+              <span className="text-sm font-medium">{t('eTracker.loadingDashboard')}</span>
             </div>
           ) : (
             <table className="w-full text-left border-collapse" id="table-etracker-tickets">
               <thead>
                 <tr className="bg-gray-50/50 text-gray-600 text-xs font-semibold uppercase tracking-wider">
-                  <th className="p-4 border-b border-gray-200">ID</th>
-                  <th className="p-4 border-b border-gray-200">Ticket Description / Summary</th>
-                  <th className="p-4 border-b border-gray-200 md:w-36">Department</th>
-                  <th className="p-4 border-b border-gray-200 text-center">Status</th>
-                  <th className="p-4 border-b border-gray-200 text-center">Priority</th>
-                  <th className="p-4 border-b border-gray-200">Assignee</th>
-                  <th className="p-4 border-b border-gray-200">Timeline</th>
-                  <th className="p-4 border-b border-gray-200 text-right">Actions</th>
+                  <th className="p-4 border-b border-gray-200">{t('eTracker.id')}</th>
+                  <th className="p-4 border-b border-gray-200">{t('eTracker.summary')}</th>
+                  <th className="p-4 border-b border-gray-200 md:w-36">{t('eTracker.responsibilityArea')}</th>
+                  <th className="p-4 border-b border-gray-200 text-center">{t('eTracker.status')}</th>
+                  <th className="p-4 border-b border-gray-200 text-center">{t('eTracker.priority')}</th>
+                  <th className="p-4 border-b border-gray-200">{t('eTracker.assignee')}</th>
+                  <th className="p-4 border-b border-gray-200">{t('eTracker.deadline')}</th>
+                  <th className="p-4 border-b border-gray-200 text-right">{t('eTracker.actionsLabel') || t('eTracker.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 text-sm">
@@ -379,23 +440,27 @@ export function IssuesList() {
                             >
                               {ticket.Title}
                             </span>
-                            {ticket.AttachmentUrl && (
+                            {ticket.AttachmentUrl && ticket.AttachmentUrl !== '[]' && (
                               <span title="Contains document or screenshot attachment" className="flex items-center">
                                 <Paperclip className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                               </span>
                             )}
                             {Number(ticket.IsApproved) === 1 && (
-                              <span className="bg-green-100 hover:bg-green-200 text-green-700 text-[9px] px-1.5 py-0.2 rounded font-extrabold shadow-sm shrink-0 uppercase tracking-widest">Approved</span>
+                              <span className="bg-green-100 hover:bg-green-200 text-green-700 text-[9px] px-1.5 py-0.2 rounded font-extrabold shadow-sm shrink-0 uppercase tracking-widest">
+                                {language === 'mr' ? 'मंजूर' : language === 'hi' ? 'स्वीकृत' : 'Approved'}
+                              </span>
                             )}
                             {Number(ticket.IsApproved) === 2 && (
-                              <span className="bg-red-100 hover:bg-red-200 text-red-700 text-[9px] px-1.5 py-0.2 rounded font-extrabold shadow-sm shrink-0 uppercase tracking-widest">Rejected</span>
+                              <span className="bg-red-100 hover:bg-red-200 text-red-700 text-[9px] px-1.5 py-0.2 rounded font-extrabold shadow-sm shrink-0 uppercase tracking-widest">
+                                {language === 'mr' ? 'नाकारले' : language === 'hi' ? 'अस्वीकृत' : 'Rejected'}
+                              </span>
                             )}
                           </div>
                           <p className="text-xs text-gray-500 line-clamp-1 max-w-[320px]">{ticket.Description}</p>
                           <div className="text-[10px] text-gray-400 font-semibold flex items-center gap-1.5">
-                            <span>Author: {ticket.CreatedBy || 'Unknown'}</span>
+                            <span>{language === 'mr' ? 'तक्रारदार' : language === 'hi' ? 'शिकायतकर्ता' : 'Author'}: {ticket.CreatedBy || 'Unknown'}</span>
                             <span>&bull;</span>
-                            <span>Logged: {ticket.CreatedAt ? new Date(ticket.CreatedAt).toLocaleDateString() : 'N/A'}</span>
+                            <span>{language === 'mr' ? 'तारीख' : language === 'hi' ? 'दिनांक' : 'Logged'}: {ticket.CreatedAt ? new Date(ticket.CreatedAt).toLocaleDateString() : 'N/A'}</span>
                           </div>
                         </div>
                       </td>
@@ -403,7 +468,7 @@ export function IssuesList() {
                       {/* Department */}
                       <td className="p-4">
                         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
-                          {ticket.Department || 'Operations'}
+                          {translateDept(ticket.Department || 'Operations')}
                         </span>
                       </td>
 
@@ -429,7 +494,7 @@ export function IssuesList() {
                           ticket.Priority === 'Medium' ? 'bg-amber-100 text-amber-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {ticket.Priority === 'High' ? '🔴 High' : ticket.Priority === 'Medium' ? '🟡 Medium' : '🟢 Low'}
+                          {ticket.Priority === 'High' ? `🔴 ${translatePriority('High')}` : ticket.Priority === 'Medium' ? `🟡 ${translatePriority('Medium')}` : `🟢 ${translatePriority('Low')}`}
                         </span>
                       </td>
 
@@ -445,7 +510,7 @@ export function IssuesList() {
                           }}
                           className="w-full text-xs border border-gray-200 hover:border-gray-300 rounded p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[150px] font-medium text-gray-700"
                         >
-                          <option value="">Unassigned</option>
+                          <option value="">{t('eTracker.unassigned')}</option>
                           {users.map(u => (
                             <option key={u.Id || u.id} value={String(u.Id || u.id)}>
                               {u.Name || u.name}
@@ -465,9 +530,9 @@ export function IssuesList() {
                               </span>
                             </div>
                             {delayed ? (
-                              <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.2 rounded-full inline-block border border-red-100 animate-pulse">SLA Breached</span>
+                              <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.2 rounded-full inline-block border border-red-100 animate-pulse">{t('eTracker.slaBreached')}</span>
                             ) : (
-                              <span className="text-[10px] text-gray-400 font-semibold block">Remaining time ok</span>
+                              <span className="text-[10px] text-gray-400 font-semibold block">{language === 'mr' ? 'उर्वरित वेळ योग्य' : language === 'hi' ? 'शेष समय ठीक है' : 'Remaining time ok'}</span>
                             )}
                           </div>
                         ) : (
@@ -478,22 +543,26 @@ export function IssuesList() {
                       {/* Action buttons */}
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => navigate(`/e-tracker/issues/${ticket.Id || ticket.id}`)}
-                            className="p-1.5 hover:bg-gray-100 rounded-md text-gray-500 hover:text-blue-600 transition-colors"
-                            title="Edit Ticket Details"
-                            id={`btn-edit-ticket-${ticket.Id || ticket.id}`}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(ticket.Id || ticket.id)}
-                            className="p-1.5 hover:bg-red-50 rounded-md text-gray-500 hover:text-red-600 transition-colors"
-                            title="Purge Ticket Records"
-                            id={`btn-delete-ticket-${ticket.Id || ticket.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {hasPermission('/e-tracker/issues', 'edit') && (
+                            <button
+                              onClick={() => navigate(`/e-tracker/issues/${ticket.Id || ticket.id}`)}
+                              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-500 hover:text-blue-600 transition-colors"
+                              title="Edit Ticket Details"
+                              id={`btn-edit-ticket-${ticket.Id || ticket.id}`}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {hasPermission('/e-tracker/issues', 'delete') && (
+                            <button
+                              onClick={() => handleDelete(ticket.Id || ticket.id)}
+                              className="p-1.5 hover:bg-red-50 rounded-md text-gray-500 hover:text-red-600 transition-colors"
+                              title="Purge Ticket Records"
+                              id={`btn-delete-ticket-${ticket.Id || ticket.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -504,8 +573,10 @@ export function IssuesList() {
                     <td colSpan={8} className="p-16 text-center text-gray-500 flex flex-col items-center justify-center gap-3">
                       <Inbox className="w-10 h-10 text-gray-300 mx-auto" />
                       <div>
-                        <span className="font-extrabold text-sm block text-gray-800">No matching tickets found</span>
-                        <span className="text-xs text-gray-400 mt-1 block">Adjust selected filter variables above or open a new problem ticket.</span>
+                        <span className="font-extrabold text-sm block text-gray-800">{t('eTracker.noTicketsFound')}</span>
+                        <span className="text-xs text-gray-400 mt-1 block">
+                          {language === 'mr' ? 'वर दिलेले फिल्टर बदला किंवा नवीन तिकीट तयार करा.' : language === 'hi' ? 'ऊपर दिए गए फ़िल्टर बदलें या नया टिकट बनाएं।' : 'Adjust selected filter variables above or open a new problem ticket.'}
+                        </span>
                       </div>
                     </td>
                   </tr>

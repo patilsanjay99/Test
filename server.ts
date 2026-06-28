@@ -1723,7 +1723,7 @@ Please inspect and verify the following potential causes:
           if (mssqlPool) {
               const result = await mssqlPool.request()
                   .input('email', sql.NVarChar, email)
-                  .query('SELECT * FROM Users WHERE Email = @email OR Name = @email'); // allowing name optionally
+                  .query('SELECT * FROM Users WHERE Email = @email OR Name = @email OR Phone = @email'); // allowing email, name or phone
               
               if (result.recordset.length > 0) {
                   const dbUser = result.recordset[0];
@@ -1738,7 +1738,7 @@ Please inspect and verify the following potential causes:
               }
           } else {
               // SQLite
-              const userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ?").get(email, email) as any;
+              const userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ? OR Phone = ?").get(email, email, email) as any;
               if (userRow) {
                   const dbPassword = userRow.Password || (userRow.Email === 'admin@fpc.com' ? 'admin123' : 'welcome123');
                   if (dbPassword === password) {
@@ -1771,12 +1771,12 @@ Please inspect and verify the following potential causes:
           if (mssqlPool) {
               const result = await mssqlPool.request()
                   .input('email', sql.NVarChar, email)
-                  .query('SELECT * FROM Users WHERE Email = @email OR Name = @email');
+                  .query('SELECT * FROM Users WHERE Email = @email OR Name = @email OR Phone = @email');
               if (result.recordset.length > 0) {
                   userRow = result.recordset[0];
               }
           } else {
-              userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ?").get(email, email) as any;
+              userRow = sqliteDb.prepare("SELECT * FROM Users WHERE Email = ? OR Name = ? OR Phone = ?").get(email, email, email) as any;
           }
 
           if (!userRow) {

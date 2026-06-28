@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Building2, Receipt, Shield, Bell, Database, Download, Code, ClipboardList, Cloud } from 'lucide-react';
+import { Save, Building2, Receipt, Shield, Bell, Database, Download, Code, ClipboardList, Cloud, RefreshCw } from 'lucide-react';
 import JSZip from 'jszip';
 
 export function Settings() {
@@ -57,7 +57,24 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState('general');
   const [isGeneratingZip, setIsGeneratingZip] = useState(false);
   const [isGeneratingDeployZip, setIsGeneratingDeployZip] = useState(false);
+  const [isSyncingAccounts, setIsSyncingAccounts] = useState(false);
   const [selectedRole, setSelectedRole] = useState('HR');
+
+  const handleSyncAccounts = async () => {
+    try {
+      setIsSyncingAccounts(true);
+      const res = await fetch('/api/v1/sync-accounts', { method: 'POST' });
+      if (res.ok) {
+        alert('Accounts ledger synchronized successfully!');
+      } else {
+        alert('Failed to synchronize Accounts.');
+      }
+    } catch (err: any) {
+      alert('Error during sync: ' + err.message);
+    } finally {
+      setIsSyncingAccounts(false);
+    }
+  };
 
   const [isCleanupUnlocked, setIsCleanupUnlocked] = useState(false);
   const [cleanupPasswordInput, setCleanupPasswordInput] = useState('');
@@ -109,6 +126,9 @@ export function Settings() {
     'Accounting: Cash Receipts': { view: true, add: false, edit: false, delete: false },
     'Accounting: Bank Receipts': { view: true, add: false, edit: false, delete: false },
     'MIS & Reports: MIS & Reports': { view: true, add: false, edit: false, delete: false },
+    'E-Tracker: Dashboard': { view: true, add: false, edit: false, delete: false },
+    'E-Tracker: Ticket Management': { view: true, add: true, edit: true, delete: true },
+    'E-Tracker: Status Configuration': { view: true, add: true, edit: true, delete: true },
     'Settings: Settings': { view: true, add: true, edit: true, delete: true },
   };
 
@@ -826,6 +846,40 @@ SET IDENTITY_INSERT Accounts OFF;
 
           {activeTab === 'backup' && (
             <div className="space-y-6">
+              {/* Accounts Synchronization Section */}
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden border-t-4 border-t-blue-600">
+                <div className="p-5 border-b border-gray-100 bg-blue-50/10">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1 px-2.5 bg-blue-100 rounded text-blue-800 text-xs font-semibold uppercase tracking-wider">Synchronization</span>
+                    <h2 className="text-lg font-semibold text-gray-950">Accounts Ledger Synchronization</h2>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Keep your primary data records (Customers, Vendors, and FPC Members) perfectly in sync with the general ledger accounts.
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between border border-blue-100 rounded-xl p-5 bg-blue-50/5 hover:border-blue-300 transition-all gap-4">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-950 flex items-center gap-2">
+                        <RefreshCw className="w-5 h-5 text-blue-600" />
+                        Re-synchronize Ledger Accounts
+                      </h3>
+                      <p className="text-xs text-gray-600 max-w-2xl leading-relaxed">
+                        Checks all database entities (Active Members, Customers, and Vendors) and heals any missing, broken, or mismatched ledger accounts in the general ledger. It also merges old redundant duplicate accounts into their active synced ledger. Safe to run at any time.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleSyncAccounts}
+                      disabled={isSyncingAccounts}
+                      className={`shrink-0 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all shadow ${isSyncingAccounts ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md'}`}
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isSyncingAccounts ? 'animate-spin' : ''}`} />
+                      {isSyncingAccounts ? 'SYNCING...' : 'RE-SYNC ACCOUNTS'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Premium Direct Backup Section */}
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden border-t-4 border-t-green-600">
                 <div className="p-5 border-b border-gray-100 bg-green-50/30">

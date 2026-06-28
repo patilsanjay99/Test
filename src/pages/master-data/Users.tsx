@@ -153,6 +153,7 @@ export function Users() {
               <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                 <th className="font-medium p-4 border-b border-gray-200">User</th>
                 <th className="font-medium p-4 border-b border-gray-200">Role</th>
+                <th className="font-medium p-4 border-b border-gray-200">Mobile No.</th>
                 <th className="font-medium p-4 border-b border-gray-200">Status</th>
                 <th className="font-medium p-4 border-b border-gray-200">Last Login</th>
                 <th className="font-medium p-4 border-b border-gray-200 text-right">Actions</th>
@@ -160,9 +161,9 @@ export function Users() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan={5} className="p-4 text-center text-sm text-gray-500">Loading...</td></tr>
+                <tr><td colSpan={6} className="p-4 text-center text-sm text-gray-500">Loading...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center text-sm text-gray-500">No records found</td></tr>
+                <tr><td colSpan={6} className="p-4 text-center text-sm text-gray-500">No records found</td></tr>
               ) : filteredUsers.map((user) => (
                 <tr key={user.Id} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4">
@@ -181,6 +182,13 @@ export function Users() {
                       <Shield className="w-3.5 h-3.5 text-gray-400" />
                       <span className="text-sm text-gray-700 font-medium">{user.Role}</span>
                     </div>
+                  </td>
+                  <td className="p-4 text-sm text-gray-700">
+                    {user.Phone ? (
+                      <span className="font-mono">{user.Phone}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">N/A</span>
+                    )}
                   </td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${

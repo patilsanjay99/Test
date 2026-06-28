@@ -11,7 +11,9 @@ import {
   Calendar,
   Layers,
   Search,
-  Filter
+  Filter,
+  Wrench,
+  CheckSquare
 } from 'lucide-react';
 import { exportToCSV } from '../../lib/utils';
 import { formatDate } from '../../utils/dateFormatter';
@@ -58,7 +60,8 @@ const reportCategories = [
     icon: Layers,
     color: 'bg-slate-50 text-slate-600 border-slate-100',
     reports: [
-      { name: 'Audit Log', description: 'Track all user activities and system operations' }
+      { name: 'Audit Log', description: 'Track all user activities and system operations' },
+      { name: 'e-Tracker Ticket Report', description: 'Comprehensive end-to-end ticket audit trails, SLAs, and assignment tracking' }
     ]
   }
 ];
@@ -81,6 +84,9 @@ export function Reports() {
   const [purchaseReturns, setPurchaseReturns] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [issues, setIssues] = useState<any[]>([]);
+  const [issueStatuses, setIssueStatuses] = useState<any[]>([]);
 
   // Ledger Filter states
   const [ledgerAccId, setLedgerAccId] = useState<string>('');
@@ -89,6 +95,14 @@ export function Reports() {
   const [fromDate, setFromDate] = useState<string>('2026-04-01');
   const [toDate, setToDate] = useState<string>('2026-06-30');
   const [asOnDate, setAsOnDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+  // e-Tracker Filter states
+  const [ticketAssigneeId, setTicketAssigneeId] = useState<string>('');
+  const [ticketDepartment, setTicketDepartment] = useState<string>('ALL');
+  const [ticketStatusId, setTicketStatusId] = useState<string>('ALL');
+  const [ticketPriority, setTicketPriority] = useState<string>('ALL');
+  const [ticketFromDate, setTicketFromDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [ticketToDate, setTicketToDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const compId = activeCompany?.id || '';
@@ -105,8 +119,11 @@ export function Reports() {
       fetch(`/api/v1/data/SalesReturns?CompanyId=${compId}`).then(r => r.json()).catch(() => []),
       fetch(`/api/v1/data/PurchaseReturns?CompanyId=${compId}`).then(r => r.json()).catch(() => []),
       fetch(`/api/v1/data/Vendors?CompanyId=${compId}`).then(r => r.json()).catch(() => []),
-      fetch(`/api/data/locations?CompanyId=${compId}`).then(r => r.json()).catch(() => [])
-    ]).then(([acc, inv, sls, mem, jEnt, jLines, pur, adj, custs, srets, prets, vnds, locs]) => {
+      fetch(`/api/data/locations?CompanyId=${compId}`).then(r => r.json()).catch(() => []),
+      fetch('/api/v1/data/Users').then(r => r.json()).catch(() => []),
+      fetch('/api/data/Issues').then(r => r.json()).catch(() => []),
+      fetch('/api/data/IssueStatuses').then(r => r.json()).catch(() => [])
+    ]).then(([acc, inv, sls, mem, jEnt, jLines, pur, adj, custs, srets, prets, vnds, locs, usr, iss, isst]) => {
       setAccounts(Array.isArray(acc) ? acc : []);
       setInventory(Array.isArray(inv) ? inv : []);
       setSales(Array.isArray(sls) ? sls : []);
@@ -120,6 +137,9 @@ export function Reports() {
       setPurchaseReturns(Array.isArray(prets) ? prets : []);
       setVendors(Array.isArray(vnds) ? vnds : []);
       setLocations(Array.isArray(locs) ? locs : []);
+      setUsers(Array.isArray(usr) ? usr : []);
+      setIssues(Array.isArray(iss) ? iss : []);
+      setIssueStatuses(Array.isArray(isst) ? isst : []);
     }).catch(console.error);
   }, [activeCompany?.id]);
 
@@ -615,8 +635,33 @@ export function Reports() {
     return { balance: netBalance, type: finalType };
   };
 
+  const computedTickets = useMemo(() => {
+    return issues.filter(ticket => {
+      // Date filter
+      const ticketDate = ticket.CreatedAt ? ticket.CreatedAt.substring(0, 10) : '';
+      const matchesDate = (!ticketDate) || (ticketDate >= ticketFromDate && ticketDate <= ticketToDate);
+      if (!matchesDate) return false;
+
+      // Assignee filter
+      if (ticketAssigneeId && String(ticket.AssigneeId) !== String(ticketAssigneeId)) return false;
+
+      // Department filter
+      if (ticketDepartment !== 'ALL' && ticket.Department !== ticketDepartment) return false;
+
+      // Status filter
+      if (ticketStatusId !== 'ALL' && String(ticket.StatusId) !== String(ticketStatusId)) return false;
+
+      // Priority filter
+      if (ticketPriority !== 'ALL' && ticket.Priority !== ticketPriority) return false;
+
+      return true;
+    });
+  }, [issues, ticketAssigneeId, ticketDepartment, ticketStatusId, ticketPriority, ticketFromDate, ticketToDate]);
+
   const generateData = (reportName: string) => {
     switch (reportName) {
+      case 'e-Tracker Ticket Report':
+        return computedTickets;
       case 'Balance Sheet': {
         const assets: any[] = [];
         const liab: any[] = [];
@@ -979,6 +1024,26 @@ export function Reports() {
         { Date: '', VoucherType: '', VoucherNo: '', PartyName: 'Closing Balance', Location: '', Supplier: '', PurInvNo: '', Rate: '', Inward: '', Outward: '', BalanceQty: computedStockLedger.closingQty }
       ];
       exportToCSV(expRows, `Stock_Ledger_${itm?.Name || 'Item'}_${fromDate}_to_${toDate}`);
+    } else if (selectedReport.name === 'e-Tracker Ticket Report') {
+      const expRows = computedTickets.map(ticket => {
+        const matchingStatus = issueStatuses.find(s => String(s.Id || s.id) === String(ticket.StatusId));
+        return {
+          'Ticket ID': `#${ticket.Id || ticket.id}`,
+          'Title': ticket.Title || '',
+          'Description': ticket.Description || '',
+          'Department': ticket.Department || '',
+          'Priority': ticket.Priority || '',
+          'Status': matchingStatus ? matchingStatus.StatusName : 'Open',
+          'Assignee': ticket.AssigneeName || 'Unassigned',
+          'Created At': ticket.CreatedAt ? formatDate(ticket.CreatedAt) : '',
+          'Created By': ticket.CreatedBy || '',
+          'SLA Deadline': ticket.SlaDeadline ? formatDate(ticket.SlaDeadline) : '',
+          'Closed At': ticket.ClosedAt ? formatDate(ticket.ClosedAt) : 'Active',
+          'Approved': Number(ticket.IsApproved) === 1 ? 'Yes' : 'No',
+          'Resolution / Action Remarks': ticket.ResolutionRemarks || ticket.remarks || ''
+        };
+      });
+      exportToCSV(expRows, `eTracker_Ticket_Report_${ticketFromDate}_to_${ticketToDate}`);
     } else if (Array.isArray(currentData)) {
       exportToCSV(currentData, selectedReport.name);
     } else {
@@ -1212,10 +1277,192 @@ export function Reports() {
               </div>
             )}
 
+            {selectedReport.name === 'e-Tracker Ticket Report' && (
+              <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap gap-4 items-end print:hidden relative z-40">
+                <div className="flex flex-col min-w-[220px] flex-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">Assignee / Assigned To</label>
+                  <AutocompleteCombobox
+                    options={[
+                      { value: '', label: '-- All Assignees --' },
+                      ...users.map(u => ({
+                        value: String(u.Id || u.id),
+                        label: u.Name || u.name || '',
+                        sublabel: u.Email || u.email ? `Email: ${u.Email || u.email}` : undefined
+                      }))
+                    ]}
+                    value={ticketAssigneeId}
+                    onChange={setTicketAssigneeId}
+                    placeholder="Search/Select Employee..."
+                  />
+                </div>
+                
+                <div className="flex flex-col min-w-[150px]">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">Responsibility Area</label>
+                  <select 
+                    value={ticketDepartment} 
+                    onChange={e => setTicketDepartment(e.target.value)} 
+                    className="px-3 py-1.5 border border-[#8faad8] rounded text-sm bg-[#f4fbf4] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="ALL">-- All Departments --</option>
+                    {['Operations', 'Sales', 'Purchase', 'IT & Infrastructure', 'Accounting & Payroll', 'HR & Administration', 'Customer Support', 'FPC Logistics'].map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col min-w-[150px]">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">Lifecycle Phase</label>
+                  <select 
+                    value={ticketStatusId} 
+                    onChange={e => setTicketStatusId(e.target.value)} 
+                    className="px-3 py-1.5 border border-[#8faad8] rounded text-sm bg-[#f4fbf4] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="ALL">-- All Statuses --</option>
+                    {issueStatuses.map(s => (
+                      <option key={s.Id || s.id} value={String(s.Id || s.id)}>{s.StatusName}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col min-w-[150px]">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">Priority Weight</label>
+                  <select 
+                    value={ticketPriority} 
+                    onChange={e => setTicketPriority(e.target.value)} 
+                    className="px-3 py-1.5 border border-[#8faad8] rounded text-sm bg-[#f4fbf4] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="ALL">-- All Priorities --</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                  <CustomDatePicker 
+                    value={ticketFromDate} 
+                    onChange={setTicketFromDate} 
+                    className="w-full" 
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                  <CustomDatePicker 
+                    value={ticketToDate} 
+                    onChange={setTicketToDate} 
+                    className="w-full" 
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="p-0 flex-1 overflow-auto bg-gray-50 flex flex-col print:overflow-visible">
               {selectedReport.name === 'Audit Log' ? (
                 <div className="flex-1 overflow-y-auto">
                   <AuditLogs companyId={activeCompany?.id ? parseInt(activeCompany.id, 10) : 0} hideHeader={true} />
+                </div>
+              ) : selectedReport.name === 'e-Tracker Ticket Report' ? (
+                <div className="p-6">
+                  <div className="border border-gray-200 bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap justify-between items-center text-xs text-gray-500 uppercase tracking-widest font-semibold shrink-0 gap-2">
+                      <span>e-Tracker Ticket Audit & Performance Report</span>
+                      <span>Period: {formatDate(ticketFromDate)} to {formatDate(ticketToDate)}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase border-b border-gray-200 text-left">
+                            <th className="px-4 py-3">ID</th>
+                            <th className="px-4 py-3 min-w-[200px]">Ticket Details</th>
+                            <th className="px-4 py-3">Dept / Priority</th>
+                            <th className="px-4 py-3 text-center">Lifecycle Phase</th>
+                            <th className="px-4 py-3">Assignee</th>
+                            <th className="px-4 py-3">Timestamps (SLA)</th>
+                            <th className="px-4 py-3">Resolution Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 text-sm">
+                          {computedTickets.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
+                                No tickets found matching the specified search criteria.
+                              </td>
+                            </tr>
+                          ) : (
+                            computedTickets.map((ticket, idx) => {
+                              const matchingStatus = issueStatuses.find(s => String(s.Id || s.id) === String(ticket.StatusId));
+                              const badgeColor = matchingStatus?.Color || '#3B82F6';
+                              
+                              // Check SLA Breach
+                              let isDelayed = false;
+                              if (ticket.SlaDeadline) {
+                                const isClosed = matchingStatus?.IsClosureStatus || ticket.ClosedAt;
+                                if (!isClosed) {
+                                  const deadline = new Date(ticket.SlaDeadline);
+                                  const today = new Date();
+                                  today.setHours(0,0,0,0);
+                                  deadline.setHours(0,0,0,0);
+                                  isDelayed = today.getTime() > deadline.getTime();
+                                }
+                              }
+
+                              return (
+                                <tr key={idx} className={`hover:bg-slate-50 transition-colors ${isDelayed ? 'bg-red-50/20' : ''}`}>
+                                  <td className="px-4 py-3 font-mono font-bold text-gray-500">
+                                    #{ticket.Id || ticket.id}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="font-bold text-gray-900">{ticket.Title}</div>
+                                    <div className="text-xs text-gray-500 line-clamp-2 mt-0.5">{ticket.Description || 'No description provided.'}</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">Created By: <span className="font-medium text-gray-600">{ticket.CreatedBy || 'Unknown'}</span></div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="bg-slate-100 text-slate-800 text-[10px] px-2 py-0.5 rounded font-semibold block w-fit mb-1">{ticket.Department}</span>
+                                    <span className={`text-[10px] font-bold ${
+                                      ticket.Priority === 'High' ? 'text-red-600' : ticket.Priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
+                                    }`}>
+                                      {ticket.Priority || 'Low'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span 
+                                      className="px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-sm inline-block whitespace-nowrap"
+                                      style={{ backgroundColor: badgeColor }}
+                                    >
+                                      {matchingStatus ? matchingStatus.StatusName : 'Open'}
+                                    </span>
+                                    {Number(ticket.IsApproved) === 1 && (
+                                      <span className="block text-[9px] text-green-700 font-bold tracking-wider mt-1 uppercase">Approved</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 font-medium text-slate-800">
+                                    {ticket.AssigneeName || <span className="text-gray-400 italic">Unassigned</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-slate-600 space-y-1">
+                                    <div>Created: <span className="font-medium">{ticket.CreatedAt ? formatDate(ticket.CreatedAt) : '—'}</span></div>
+                                    {ticket.SlaDeadline && (
+                                      <div className={`${isDelayed ? 'text-red-600 font-bold' : ''}`}>
+                                        Deadline: <span className="font-medium">{formatDate(ticket.SlaDeadline)}</span>
+                                        {isDelayed && <span className="ml-1 text-[9px] uppercase tracking-wider bg-red-100 text-red-700 px-1 rounded">SLA Breached</span>}
+                                      </div>
+                                    )}
+                                    {ticket.ClosedAt && (
+                                      <div className="text-green-600 font-medium">Closed: {formatDate(ticket.ClosedAt)}</div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-slate-600 max-w-[200px] truncate" title={ticket.ResolutionRemarks || ticket.remarks || ''}>
+                                    {ticket.ResolutionRemarks || ticket.remarks || <span className="text-gray-400 italic">No remarks recorded.</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               ) : selectedReport.name === 'Balance Sheet' ? (
                 <div className="p-6">

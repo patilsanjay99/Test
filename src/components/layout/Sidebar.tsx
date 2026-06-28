@@ -149,18 +149,18 @@ export function Sidebar() {
       ]
     },
     { 
-      title: 'E-Tracker', 
+      title: t('sidebar.eTracker'), 
       path: '/e-tracker', 
       icon: ClipboardList,
       submenu: [
-        { title: 'Dashboard', path: '/e-tracker', icon: LayoutDashboard },
-        { title: 'Issues & Tickets', path: '/e-tracker/issues', icon: Briefcase },
-        { title: 'Status Master', path: '/e-tracker/statuses', icon: Settings }
+        { title: t('sidebar.eTrackerDashboard'), path: '/e-tracker', icon: LayoutDashboard },
+        { title: t('sidebar.eTrackerIssues'), path: '/e-tracker/issues', icon: Briefcase },
+        { title: t('sidebar.eTrackerStatuses'), path: '/e-tracker/statuses', icon: Settings }
       ]
     },
     { title: t('sidebar.reports'), path: '/reports', icon: FileText },
     { title: t('sidebar.settings'), path: '/settings', icon: Settings },
-    { title: 'User Manual', path: '/user-manual', icon: BookOpen },
+    { title: t('sidebar.userManual'), path: '/user-manual', icon: BookOpen },
   ];
 
   const toggleExpand = (title: string) => {

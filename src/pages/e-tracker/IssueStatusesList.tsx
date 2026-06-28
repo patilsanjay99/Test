@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Settings, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function IssueStatusesList() {
   const { activeCompany } = useAppContext();
+  const { hasPermission } = useAuth();
   const [statuses, setStatuses] = useState<any[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<any | null>(null);
@@ -148,17 +150,19 @@ export function IssueStatusesList() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Configure and manage dynamic, sequence-controlled lifecycle phases for tickets</p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setIsFormOpen(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all shadow-sm shrink-0 self-start md:self-auto"
-          id="btn-add-status"
-        >
-          <Plus className="w-4 h-4" />
-          Add Custom Status
-        </button>
+        {hasPermission('/e-tracker/statuses', 'add') && (
+          <button
+            onClick={() => {
+              resetForm();
+              setIsFormOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all shadow-sm shrink-0 self-start md:self-auto"
+            id="btn-add-status"
+          >
+            <Plus className="w-4 h-4" />
+            Add Custom Status
+          </button>
+        )}
       </div>
 
       {/* Main Grid */}
@@ -273,22 +277,26 @@ export function IssueStatusesList() {
                     {/* Actions */}
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(s)}
-                          className="p-1.5 hover:bg-gray-100 rounded-md text-gray-500 hover:text-blue-600 transition-all"
-                          title="Edit configuration"
-                          id={`btn-edit-status-${s.Id || s.id}`}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(s.Id || s.id)}
-                          className="p-1.5 hover:bg-rose-50 rounded-md text-gray-500 hover:text-red-600 transition-all"
-                          title="Delete status"
-                          id={`btn-delete-status-${s.Id || s.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {hasPermission('/e-tracker/statuses', 'edit') && (
+                          <button
+                            onClick={() => handleEdit(s)}
+                            className="p-1.5 hover:bg-gray-100 rounded-md text-gray-500 hover:text-blue-600 transition-all"
+                            title="Edit configuration"
+                            id={`btn-edit-status-${s.Id || s.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission('/e-tracker/statuses', 'delete') && (
+                          <button
+                            onClick={() => handleDelete(s.Id || s.id)}
+                            className="p-1.5 hover:bg-rose-50 rounded-md text-gray-500 hover:text-red-600 transition-all"
+                            title="Delete status"
+                            id={`btn-delete-status-${s.Id || s.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

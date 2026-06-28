@@ -58,6 +58,28 @@ export function UserForm() {
 
   const handleSave = async () => {
     if (!formData.Name) return alert('Name is required');
+    
+    const emailEntered = formData.Email.trim() !== '';
+    const phoneEntered = formData.Phone.trim() !== '';
+
+    if (!emailEntered && !phoneEntered) {
+      return alert('Either Email Address or Phone Mobile (10 digits) is required.');
+    }
+
+    if (emailEntered) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.Email.trim())) {
+        return alert('Please enter a valid Email Address.');
+      }
+    }
+
+    if (phoneEntered) {
+      const cleanPhone = formData.Phone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        return alert('Phone Mobile must be exactly 10 digits (e.g. 9876543210).');
+      }
+    }
+
     try {
       setSaving(true);
       const existingRes = await fetch(`/api/v1/data/Users`);
@@ -141,7 +163,7 @@ export function UserForm() {
           {/* Row 2: Email Address */}
           <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
             <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
-              Email Address
+              Email Address <span className="text-gray-500 font-normal text-xs ml-1">(Required if Mobile empty)</span>
             </div>
             <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
               <input 
@@ -157,14 +179,14 @@ export function UserForm() {
           {/* Row 3: Phone Mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-blue-900 min-h-[48px] items-stretch">
             <div className="bg-[#f1f5f9] px-4 py-3 flex items-center font-bold text-[#1e293b] text-sm sm:col-span-1 border-r border-[#8faad8]">
-              Phone Mobile
+              Phone Mobile <span className="text-gray-500 font-normal text-xs ml-1">(10 digits, Required if Email empty)</span>
             </div>
             <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
               <input 
                 type="tel" 
                 value={formData.Phone} 
                 onChange={e => setFormData({...formData, Phone: e.target.value})} 
-                placeholder="+91 98765 43210" 
+                placeholder="e.g. 9876543210" 
                 className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]" 
               />
             </div>
