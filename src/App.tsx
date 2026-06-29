@@ -58,6 +58,11 @@ import { ChartOfAccounts } from './pages/accounting/ChartOfAccounts';
 import { AccountForm } from './pages/accounting/AccountForm';
 import { BulkUpload } from './pages/master-data/BulkUpload';
 import { JournalEntries } from './pages/accounting/JournalEntries';
+import { DemandEnquiry } from './pages/demand/DemandEnquiry';
+import { DemandForecasting } from './pages/demand/DemandForecasting';
+import { FarmerPlanning } from './pages/demand/FarmerPlanning';
+import { DemandAggregation } from './pages/demand/DemandAggregation';
+import { MarketIntelligence } from './pages/demand/MarketIntelligence';
 import { JournalEntryForm } from './pages/accounting/JournalEntryForm';
 import { CashPayments } from './pages/accounting/CashPayments';
 import { CashPaymentForm } from './pages/accounting/CashPaymentForm';
@@ -138,6 +143,15 @@ export default function App() {
               <Route path="accounts/:id" element={<AccountForm />} />
               <Route path="bulk-upload" element={<BulkUpload />} />
             </Route>
+
+            <Route path="demand">
+              <Route path="enquiry" element={<DemandEnquiry />} />
+              <Route path="forecasting" element={<DemandForecasting />} />
+              <Route path="farmer-planning" element={<FarmerPlanning />} />
+              <Route path="aggregation" element={<DemandAggregation />} />
+              <Route path="intelligence" element={<MarketIntelligence />} />
+            </Route>
+
             <Route path="fpc">
               <Route path="members" element={<Members />} />
               <Route path="members/new" element={<MemberForm />} />

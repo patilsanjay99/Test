@@ -22,7 +22,9 @@ import {
   ClipboardList,
   LogOut,
   BookOpen,
-  Scale
+  Scale,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MenuItem } from '../../types';
@@ -87,24 +89,31 @@ export function Sidebar() {
       ]
     },
     { 
+      title: t('sidebar.demandManagement'), 
+      path: '/demand', 
+      icon: ShoppingCart, // Re-using an appropriate icon or import something better like Activity
+      submenu: [
+        { title: t('sidebar.demandEnquiry'), path: '/demand/enquiry', icon: ClipboardList },
+        { title: t('sidebar.demandForecasting'), path: '/demand/forecasting', icon: TrendingUp },
+        { title: t('sidebar.farmerPlanning'), path: '/demand/farmer-planning', icon: Users },
+        { title: t('sidebar.demandAggregation'), path: '/demand/aggregation', icon: Package },
+        { title: t('sidebar.marketIntelligence'), path: '/demand/intelligence', icon: Activity },
+      ]
+    },
+    { 
       title: t('sidebar.fpcManagement'), 
       path: '/fpc', 
       icon: Users,
       submenu: [
+        { title: t('sidebar.hrmsDashboard'), path: '/fpc/dashboard', icon: LayoutDashboard },
         { title: t('sidebar.fpcMembers'), path: '/fpc/members', icon: Users },
+        { title: t('sidebar.attendanceTimesheets'), path: '/fpc/attendance', icon: Calendar },
+        { title: t('sidebar.leaveManagement'), path: '/fpc/leaves', icon: ClipboardList },
+        { title: t('sidebar.payrollPayslips'), path: '/fpc/payroll', icon: Wallet },
         { title: t('sidebar.memberRegister'), path: '/fpc/register', icon: Users },
         { title: t('sidebar.shareManagement'), path: '/fpc/shares', icon: FileText },
         { title: t('sidebar.loanManagement'), path: '/fpc/loans', icon: Wallet },
-      ]
-    },
-    { 
-      title: t('sidebar.purchase'), 
-      path: '/purchase', 
-      icon: Receipt,
-      submenu: [
-        { title: t('sidebar.purchaseOrders'), path: '/purchase/orders', icon: ShoppingCart },
-        { title: t('sidebar.purchaseInvoices'), path: '/purchase/invoices', icon: Receipt },
-        { title: t('sidebar.purchaseReturns'), path: '/purchase/returns', icon: FileText }
+        { title: t('sidebar.hrmsReports'), path: '/fpc/reports', icon: FileText },
       ]
     },
     { 
@@ -116,6 +125,16 @@ export function Sidebar() {
         { title: t('sidebar.salesOrders'), path: '/sales/orders', icon: ShoppingCart },
         { title: t('sidebar.salesInvoices'), path: '/sales/invoices', icon: Receipt },
         { title: t('sidebar.salesReturns'), path: '/sales/returns', icon: FileText }
+      ]
+    },
+    { 
+      title: t('sidebar.purchase'), 
+      path: '/purchase', 
+      icon: Receipt,
+      submenu: [
+        { title: t('sidebar.purchaseOrders'), path: '/purchase/orders', icon: ShoppingCart },
+        { title: t('sidebar.purchaseInvoices'), path: '/purchase/invoices', icon: Receipt },
+        { title: t('sidebar.purchaseReturns'), path: '/purchase/returns', icon: FileText }
       ]
     },
     { 
