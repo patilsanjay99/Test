@@ -43,12 +43,11 @@ export function MarketIntelligence() {
   const [marketIntelligence, setMarketIntelligence] = useState<any[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [activeItems, setActiveItems] = useState<string[]>([]);
+  const [itemsList, setItemsList] = useState<string[]>([]);
+  const [selectedItem, setSelectedItem] = useState<string>("");
 
   // Searchable Autocomplete State Selector
   const [selectedState, setSelectedState] = useState<string>("");
-  const [stateSearch, setStateSearch] = useState<string>("");
-  const [isStateOpen, setIsStateOpen] = useState(false);
   const [procurementToast, setProcurementToast] = useState<string | null>(null);
 
   // Set default state based on active company
@@ -61,7 +60,7 @@ export function MarketIntelligence() {
   }, [activeCompany]);
 
   const fetchMarketIntelligence = async (items: string[], stateName?: string, forceRefresh: boolean = false) => {
-    if (items.length === 0) return;
+    if (items.length === 0 || !items[0]) return;
     setIsFetching(true);
     setFetchError(null);
     const targetState = stateName || selectedState || activeCompany?.StateName || activeCompany?.StateCode || 'Maharashtra';
@@ -89,12 +88,12 @@ export function MarketIntelligence() {
     }
   };
 
-  // Re-fetch market intelligence when selectedState changes
+  // Re-fetch market intelligence when selectedItem or selectedState changes
   useEffect(() => {
-    if (activeItems.length > 0 && selectedState) {
-      fetchMarketIntelligence(activeItems, selectedState);
+    if (selectedItem && selectedState) {
+      fetchMarketIntelligence([selectedItem], selectedState);
     }
-  }, [selectedState, activeItems.length]);
+  }, [selectedItem, selectedState]);
 
   // Dismiss toast after 4 seconds
   useEffect(() => {
@@ -112,21 +111,28 @@ export function MarketIntelligence() {
         const res = await fetch(`/api/v1/data/InventoryItems?CompanyId=${activeCompany?.id || ''}`);
         const data = await res.json();
         const masterItems = Array.isArray(data) ? data : [];
-        const itemNames = Array.from(new Set(masterItems.map((i: any) => i.Name || i.name).filter(Boolean)));
-        setActiveItems(itemNames as string[]);
+        const itemNames = Array.from(new Set(masterItems.map((i: any) => i.Name || i.name).filter(Boolean))) as string[];
+        const finalItems = itemNames.length > 0 ? itemNames : ['Maize', 'Soyabean', 'Wheat', 'Onion', 'Cotton'];
+        setItemsList(finalItems);
         
-        // Initial fetch with default company state
-        const targetState = selectedState || activeCompany?.StateName || activeCompany?.StateCode || 'Maharashtra';
-        if (itemNames.length > 0) {
-          fetchMarketIntelligence(itemNames as string[], targetState);
+        // By default select first item as selected item
+        if (finalItems.length > 0) {
+          setSelectedItem(finalItems[0]);
         }
       } catch (e) {
         console.error("Failed to fetch master items", e);
+        const fallback = ['Maize', 'Soyabean', 'Wheat', 'Onion', 'Cotton'];
+        setItemsList(fallback);
+        setSelectedItem(fallback[0]);
       }
     };
 
     if (activeCompany?.id) {
       fetchMasterItems();
+    } else {
+      const fallback = ['Maize', 'Soyabean', 'Wheat', 'Onion', 'Cotton'];
+      setItemsList(fallback);
+      setSelectedItem(fallback[0]);
     }
   }, [activeCompany?.id]);
 
@@ -157,82 +163,37 @@ export function MarketIntelligence() {
             AI Market Price Intelligence
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Real-time APMC price analysis and sourcing trends for master commodities in <span className="font-semibold text-blue-600">{selectedState}</span>
+            Real-time APMC price analysis and sourcing trends for <span className="font-semibold text-blue-600">{selectedItem || "commodities"}</span> in <span className="font-semibold text-blue-600">{selectedState}</span>
           </p>
         </div>
         
         <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end">
-          {/* Searchable Autocomplete State Selector with Checkbox */}
+          {/* Autocomplete State Selector with Checkbox */}
           <div className="relative">
-            <button
-              onClick={() => setIsStateOpen(!isStateOpen)}
-              className="flex items-center gap-1.5 shrink-0 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold text-blue-700 transition-colors shadow-sm uppercase tracking-wider h-10"
+            <select
+              value={selectedState}
+              onChange={(e) => {
+                const st = e.target.value;
+                setSelectedState(st);
+                if (selectedItem) {
+                  fetchMarketIntelligence([selectedItem], st);
+                }
+              }}
+              className="appearance-none bg-blue-50 hover:bg-blue-100 border border-blue-200 pl-8 pr-8 py-2 rounded-lg text-xs font-bold text-blue-700 transition-colors shadow-sm uppercase tracking-wider h-10 focus:outline-none cursor-pointer pr-10"
             >
-              <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>{selectedState || "Select State"}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />
-            </button>
-
-            {isStateOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsStateOpen(false)} />
-                <div className="absolute right-0 mt-1.5 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in duration-150">
-                  <div className="p-2 border-b border-gray-100 bg-gray-50/50">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search State..."
-                        value={stateSearch}
-                        onChange={(e) => setStateSearch(e.target.value)}
-                        className="w-full text-xs pl-8 pr-2.5 py-1.5 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto p-1">
-                    {INDIAN_STATES
-                      .filter(st => st.toLowerCase().includes(stateSearch.toLowerCase()))
-                      .map((st, sIdx) => {
-                        const isSelected = selectedState.toLowerCase() === st.toLowerCase();
-                        const isCompanyDefault = (activeCompany?.StateName || activeCompany?.StateCode || "Maharashtra").toLowerCase() === st.toLowerCase();
-                        return (
-                          <button
-                            key={sIdx}
-                            onClick={() => {
-                              setSelectedState(st);
-                              setIsStateOpen(false);
-                              setStateSearch("");
-                            }}
-                            className={`w-full text-left px-2.5 py-2 text-xs rounded-md flex items-center justify-between transition-colors ${
-                              isSelected ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-700"
-                            }`}
-                          >
-                            <span className="truncate">{st}</span>
-                            <div className="flex items-center gap-1.5">
-                              {isCompanyDefault && (
-                                <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 py-0.5 rounded font-extrabold uppercase scale-90">
-                                  DEFAULT
-                                </span>
-                              )}
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"
-                              }`}>
-                                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-              </>
-            )}
+              {INDIAN_STATES.map((st) => (
+                <option key={st} value={st} className="text-gray-700 font-medium">
+                  {st}
+                </option>
+              ))}
+            </select>
+            <MapPin className="absolute left-2.5 top-3.5 w-3.5 h-3.5 text-blue-600 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3.5 w-3.5 h-3.5 text-blue-600 pointer-events-none" />
           </div>
 
           <button 
-            onClick={() => fetchMarketIntelligence(activeItems, selectedState, true)}
-            disabled={isFetching || activeItems.length === 0}
+            onClick={() => fetchMarketIntelligence([selectedItem], selectedState, true)}
+            disabled={isFetching || !selectedItem}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-400 h-10 text-xs shadow-sm"
           >
             <RefreshCcw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
@@ -240,6 +201,32 @@ export function MarketIntelligence() {
           </button>
         </div>
       </div>
+
+      {/* Commodity Selector Pills */}
+      {itemsList.length > 0 && (
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider block mb-3">Select Commodity / Item</span>
+          <div className="flex flex-wrap gap-2">
+            {itemsList.map((item) => {
+              const isSelected = selectedItem === item;
+              return (
+                <button
+                  key={item}
+                  onClick={() => setSelectedItem(item)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 ${
+                    isSelected 
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-600/10' 
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white animate-ping' : 'bg-gray-400'}`} />
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {isFetching ? (
@@ -256,7 +243,7 @@ export function MarketIntelligence() {
               <div className="text-xl font-bold text-red-900">AI Analysis Interrupted</div>
               <p className="text-red-500 mt-2">{fetchError}</p>
               <button 
-                onClick={() => fetchMarketIntelligence(activeItems, selectedState, true)}
+                onClick={() => fetchMarketIntelligence([selectedItem], selectedState, true)}
                 className="mt-6 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors"
               >
                 Retry AI Search
@@ -403,7 +390,7 @@ export function MarketIntelligence() {
               <Info className="w-12 h-12 text-gray-200 mb-4" />
               <div className="text-xl font-bold text-gray-900">No Intelligence Data</div>
               <p className="text-gray-500 mt-2">Inventory items are required for AI analysis.</p>
-              {activeItems.length === 0 && (
+              {itemsList.length === 0 && (
                 <p className="text-sm text-blue-600 mt-4 font-medium">Add items to Master Data to start seeing market insights.</p>
               )}
             </CardContent>

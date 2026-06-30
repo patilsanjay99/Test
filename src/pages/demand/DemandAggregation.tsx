@@ -57,8 +57,6 @@ export function DemandAggregation() {
 
   // Searchable Autocomplete State Selector
   const [selectedState, setSelectedState] = useState<string>("");
-  const [stateSearch, setStateSearch] = useState<string>("");
-  const [isStateOpen, setIsStateOpen] = useState(false);
   const [procurementToast, setProcurementToast] = useState<string | null>(null);
 
   const defaultCommodities = [
@@ -412,154 +410,27 @@ export function DemandAggregation() {
               <CardTitle className="text-lg font-bold text-gray-900">AI Market Price Intelligence</CardTitle>
             </div>
             
-            <div className="flex items-center gap-3 flex-wrap flex-1 w-full md:w-auto">
-              {/* Commodity Selector with Autocomplete Search */}
-              <div className="relative min-w-[200px] flex-1 md:flex-initial">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-3.5 w-3.5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Select Commodity..."
-                  value={isOpen ? searchTerm : (selectedItemName || searchTerm)}
-                  onFocus={() => {
-                    setIsOpen(true);
-                    setSearchTerm(selectedItemName);
-                  }}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setIsOpen(true);
-                  }}
-                  className="w-full text-xs border border-blue-200 rounded-lg bg-white pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium transition-all shadow-sm h-9"
-                />
-                <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
-                  {selectedItemName && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedItemName("");
-                        setSearchTerm("");
-                      }}
-                      className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                  <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </div>
-
-                {isOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in zoom-in duration-200">
-                      <div className="p-1">
-                        {combinedItems
-                          .filter(item => {
-                            const name = (item.Name || item.name || '').toLowerCase();
-                            return name.includes(searchTerm.toLowerCase());
-                          })
-                          .slice(0, 50)
-                          .map((item, idx) => {
-                            const name = item.Name || item.name;
-                            const isSelected = selectedItemName === name;
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  setSelectedItemName(name);
-                                  setSearchTerm(name);
-                                  setIsOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
-                                  isSelected 
-                                    ? 'bg-blue-50 text-blue-700 font-bold' 
-                                    : 'hover:bg-gray-50 text-gray-700'
-                                }`}
-                              >
-                                <span>{name}</span>
-                                <span className="text-[9px] text-gray-400 font-normal uppercase tracking-tighter">{item.ItemCode || item.itemCode || ''}</span>
-                              </button>
-                            );
-                          })}
-                        {combinedItems.filter(item => (item.Name || item.name || '').toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
-                          <div className="px-3 py-4 text-center text-gray-400 text-xs italic">
-                            No matching items found
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
+            <div className="flex items-center gap-3 flex-wrap flex-1 w-full md:w-auto justify-end">
               {/* Autocomplete State Selector with Checkbox */}
               <div className="relative">
-                <button
-                  onClick={() => setIsStateOpen(!isStateOpen)}
-                  className="flex items-center gap-1.5 shrink-0 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold text-blue-700 transition-colors shadow-sm uppercase tracking-wider h-9"
+                <select
+                  value={selectedState}
+                  onChange={(e) => {
+                    const st = e.target.value;
+                    setSelectedState(st);
+                    const queryItem = selectedItemName || (combinedItems[0]?.Name || combinedItems[0]?.name || "Maize");
+                    fetchMarketIntelligence([queryItem.trim()], st);
+                  }}
+                  className="appearance-none bg-blue-50 hover:bg-blue-100 border border-blue-200 pl-8 pr-8 py-2 rounded-lg text-xs font-bold text-blue-700 transition-colors shadow-sm uppercase tracking-wider h-9 focus:outline-none cursor-pointer pr-10"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>{selectedState || "Select State"}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />
-                </button>
-
-                {isStateOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsStateOpen(false)} />
-                    <div className="absolute left-0 md:right-0 md:left-auto mt-1.5 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in duration-150">
-                      <div className="p-2 border-b border-gray-100 bg-gray-50/50">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search State..."
-                            value={stateSearch}
-                            onChange={(e) => setStateSearch(e.target.value)}
-                            className="w-full text-xs pl-8 pr-2.5 py-1.5 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium"
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto p-1">
-                        {INDIAN_STATES
-                          .filter(st => st.toLowerCase().includes(stateSearch.toLowerCase()))
-                          .map((st, sIdx) => {
-                            const isSelected = selectedState.toLowerCase() === st.toLowerCase();
-                            const isCompanyDefault = (activeCompany?.StateName || activeCompany?.StateCode || "Maharashtra").toLowerCase() === st.toLowerCase();
-                            return (
-                              <button
-                                key={sIdx}
-                                onClick={() => {
-                                  setSelectedState(st);
-                                  setIsStateOpen(false);
-                                  setStateSearch("");
-                                  const itemToQuery = selectedItemName || (combinedItems[0]?.Name || combinedItems[0]?.name || "Maize");
-                                  fetchMarketIntelligence([itemToQuery], st);
-                                }}
-                                className={`w-full text-left px-2.5 py-2 text-xs rounded-md flex items-center justify-between transition-colors ${
-                                  isSelected ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-700"
-                                }`}
-                              >
-                                <span className="truncate">{st}</span>
-                                <div className="flex items-center gap-1.5">
-                                  {isCompanyDefault && (
-                                    <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 py-0.5 rounded font-extrabold uppercase scale-90">
-                                      DEFAULT
-                                    </span>
-                                  )}
-                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                    isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"
-                                  }`}>
-                                    {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  </>
-                )}
+                  {INDIAN_STATES.map((st) => (
+                    <option key={st} value={st} className="text-gray-700 font-medium">
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                <MapPin className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-blue-600 pointer-events-none" />
+                <ChevronDown className="absolute right-2.5 top-2.5 w-3.5 h-3.5 text-blue-600 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -578,6 +449,42 @@ export function DemandAggregation() {
           </button>
         </CardHeader>
         <CardContent className="pt-4">
+          {/* Beautiful horizontal Commodity / Item selector */}
+          {(() => {
+            const itemsList = Array.from(new Set([
+              ...masterItems.map(i => i.Name || i.name),
+              ...combinedItems.map(i => i.Name || i.name)
+            ].filter(Boolean))) as string[];
+            const finalItemsList = itemsList.length > 0 ? itemsList : ['Maize', 'Soyabean', 'Wheat', 'Onion', 'Cotton'];
+            return finalItemsList.length > 0 && (
+              <div className="mb-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider block mb-3">Select Commodity / Item</span>
+                <div className="flex flex-wrap gap-2">
+                  {finalItemsList.slice(0, 15).map((item) => {
+                    const isSelected = selectedItemName === item;
+                    return (
+                      <button
+                        key={item}
+                        onClick={() => {
+                          setSelectedItemName(item);
+                          setSearchTerm(item);
+                        }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 ${
+                          isSelected 
+                            ? 'bg-blue-600 text-white ring-2 ring-blue-600/10' 
+                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white animate-ping' : 'bg-gray-400'}`} />
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {isFetchingIntelligence ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Brain className="w-12 h-12 text-blue-200 animate-pulse mb-4" />

@@ -3,6 +3,7 @@ import "dotenv/config";
 import sql from "mssql";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 import { installLotsApi, applySalesInvoiceToLots, revertSalesInvoiceFromLots } from "./server-lots-logic";
 import { createServer as createViteServer } from "vite";
 import JSZip from "jszip";
@@ -2461,6 +2462,15 @@ Please inspect and verify the following potential causes:
 
   apiRouter.get("/export/deployment", async (req, res) => {
     try {
+      // 0. Automatically trigger a clean, production-grade build first to ensure up-to-date compiled files!
+      console.log('🚀 Initiating clean precompiled build for cloud deployment export...');
+      try {
+        execSync('npm run build', { cwd: process.cwd(), stdio: 'inherit' });
+        console.log('✅ Clean build compiled successfully!');
+      } catch (buildErr: any) {
+        console.error('❌ Auto-build failed during export, attempting to pack existing dist:', buildErr);
+      }
+
       const zip = new JSZip();
       const distPath = path.join(process.cwd(), 'dist');
       
