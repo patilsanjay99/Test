@@ -53,6 +53,7 @@ export function DemandAggregation() {
   const [selectedItemName, setSelectedItemName] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
+  const [hasInitializedMaster, setHasInitializedMaster] = useState(false);
 
   // Searchable Autocomplete State Selector
   const [selectedState, setSelectedState] = useState<string>("");
@@ -87,14 +88,23 @@ export function DemandAggregation() {
 
   // Default select the first item as selectedItemName
   useEffect(() => {
-    if (!selectedItemName && combinedItems.length > 0) {
+    if (masterItems.length > 0) {
+      if (!hasInitializedMaster) {
+        const firstItem = masterItems[0].Name || masterItems[0].name;
+        if (firstItem) {
+          setSelectedItemName(firstItem);
+          setSearchTerm(firstItem);
+          setHasInitializedMaster(true);
+        }
+      }
+    } else if (combinedItems.length > 0 && !selectedItemName) {
       const firstItem = combinedItems[0].Name || combinedItems[0].name;
       if (firstItem) {
         setSelectedItemName(firstItem);
         setSearchTerm(firstItem);
       }
     }
-  }, [combinedItems, selectedItemName]);
+  }, [masterItems, combinedItems, selectedItemName, hasInitializedMaster]);
 
   // Reactive effect to fetch market intelligence whenever item or state changes
   useEffect(() => {
