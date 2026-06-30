@@ -1606,7 +1606,7 @@ export function Reports() {
                             <td className="px-4 py-3 text-right">—</td>
                             <td className="px-4 py-3 text-right">—</td>
                             <td className="px-4 py-3 text-right font-mono whitespace-nowrap">
-                              {computedLedger.openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs text-gray-500">{computedLedger.openingBalanceType}</span>
+                              {computedLedger.openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-gray-500">{computedLedger.openingBalanceType}</span>
                             </td>
                           </tr>
                           
@@ -1625,13 +1625,13 @@ export function Reports() {
                                 <td className="px-4 py-3 font-medium text-slate-800">{row.Particulars}</td>
                                 <td className="px-4 py-3 text-xs text-slate-500">{row.Narration}</td>
                                 <td className="px-4 py-3 text-right font-mono text-green-700">
-                                  {row.Debit > 0 ? row.Debit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
+                                  {row.Debit > 0 ? row.Debit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-right font-mono text-red-700">
-                                  {row.Credit > 0 ? row.Credit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
+                                  {row.Credit > 0 ? row.Credit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-right font-mono font-medium whitespace-nowrap">
-                                  {row.Balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-normal text-gray-500">{row.BalanceType}</span>
+                                  {row.Balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-normal text-gray-500">{row.BalanceType}</span>
                                 </td>
                               </tr>
                             ))
@@ -1644,13 +1644,13 @@ export function Reports() {
                             <td className="px-4 py-3 italic whitespace-nowrap">Closing Balance (C/F)</td>
                             <td className="px-4 py-3 text-xs text-slate-400">—</td>
                             <td className="px-4 py-3 text-right font-mono">
-                              {computedLedger.ledgerRows.reduce((a, b) => a + b.Debit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              {computedLedger.ledgerRows.reduce((a, b) => a + b.Debit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-4 py-3 text-right font-mono">
-                              {computedLedger.ledgerRows.reduce((a, b) => a + b.Credit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              {computedLedger.ledgerRows.reduce((a, b) => a + b.Credit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-4 py-3 text-right font-mono text-blue-900 whitespace-nowrap">
-                              {computedLedger.closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-normal text-gray-500">{computedLedger.closingBalanceType}</span>
+                              {computedLedger.closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-normal text-gray-500">{computedLedger.closingBalanceType}</span>
                             </td>
                           </tr>
                         </tbody>
@@ -1721,7 +1721,7 @@ export function Reports() {
                                 <td className="px-4 py-3 font-medium text-slate-700">{row.Location || '-'}</td>
                                 <td className="px-4 py-3 font-medium text-slate-700">{row.supplierName || '—'}</td>
                                 <td className="px-4 py-3 font-medium text-slate-700">{row.purchaseInvoiceNo || '—'}</td>
-                                <td className="px-4 py-3 text-right">{row.rate > 0 ? row.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}</td>
+                                <td className="px-4 py-3 text-right">{row.rate > 0 ? row.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</td>
                                 <td className="px-4 py-3 text-right font-mono text-green-700">
                                   {row.Inward > 0 ? row.Inward : '—'}
                                 </td>

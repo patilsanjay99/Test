@@ -372,7 +372,7 @@ export function MemberForm() {
                   <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
                     <input 
                       type="number" 
-                      step="0.1" 
+                      step="any" 
                       name="LandHolding"
                       value={formData.LandHolding || ''}
                       onChange={handleChange}

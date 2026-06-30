@@ -299,7 +299,7 @@ export function StockLedger() {
                         <td className="px-4 py-3 font-sans text-xs">{r.VoucherType}</td>
                         <td className="px-4 py-3 text-blue-600">{r.VoucherNo}</td>
                         <td className="px-4 py-3 font-sans">{r.PartyName || '-'}{r.PartyPlace ? ` (${r.PartyPlace})` : ''}</td>
-                        <td className="px-4 py-3 text-right">{r.Rate > 0 ? r.Rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}</td>
+                        <td className="px-4 py-3 text-right">{r.Rate > 0 ? r.Rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</td>
                         <td className="px-4 py-3 text-right text-green-600">{r.Inward > 0 ? r.Inward : '—'}</td>
                         <td className="px-4 py-3 text-right text-red-600">{r.Outward > 0 ? r.Outward : '—'}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{r.BalanceQty}</td>

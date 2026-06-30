@@ -198,7 +198,11 @@ export function SalesOrderForm() {
       totalGst += gst;
     });
 
-    return { subtotal, totalDiscount, totalGst, grandTotal: subtotal + totalGst };
+    const rawGrandTotal = subtotal + totalGst;
+    const grandTotal = Math.round(rawGrandTotal);
+    const roundedOff = grandTotal - rawGrandTotal;
+
+    return { subtotal, totalDiscount, totalGst, grandTotal, roundedOff };
   };
 
   const totals = calculateTotals();
@@ -409,6 +413,7 @@ export function SalesOrderForm() {
                             required
                             type="number" 
                             min="0"
+                            step="any"
                             value={line.rate || ''}
                             onChange={e => updateLine(line.id, 'rate', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right font-semibold"
@@ -467,19 +472,31 @@ export function SalesOrderForm() {
 
                 <div className="w-80 bg-slate-100 border border-[#8faad8] rounded-lg p-3 space-y-2 mt-1 mr-1">
                   <div className="flex justify-between text-xs font-bold text-slate-700">
-                    <span>Taxable Subtotal:</span>
-                    <span className="font-mono text-slate-950">₹{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>Gross Subtotal:</span>
+                    <span className="font-mono text-slate-950">₹{(totals.subtotal + totals.totalDiscount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   {totals.totalDiscount > 0 && (
-                    <div className="flex justify-between text-xs font-bold text-green-700 bg-green-100/50 px-1 rounded">
-                      <span>Total Disc Allotted:</span>
-                      <span className="font-mono">-₹{totals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
+                    <>
+                      <div className="flex justify-between text-xs font-bold text-green-700 bg-green-100/50 px-1 rounded">
+                        <span>Total Disc Allotted:</span>
+                        <span className="font-mono">-₹{totals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>Taxable Subtotal:</span>
+                        <span className="font-mono text-slate-950">₹{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
                   )}
                   <div className="flex justify-between text-xs font-bold text-slate-700">
                     <span>GST Outflow:</span>
                     <span className="font-mono text-slate-950">₹{totals.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+                  {Math.abs(totals.roundedOff) > 0.001 && (
+                    <div className="flex justify-between text-xs font-bold text-slate-700">
+                      <span>Rounded Off:</span>
+                      <span className="font-mono text-slate-950">₹{totals.roundedOff.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                   <div className="pt-2 border-t border-blue-900 flex justify-between items-center bg-emerald-100/30 px-1 rounded">
                     <span className="font-bold text-emerald-950 text-sm">Grand Total (₹):</span>
                     <span className="text-base font-black text-emerald-900 font-mono">

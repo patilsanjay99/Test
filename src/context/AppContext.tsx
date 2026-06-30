@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Company } from '../types';
+import { getStateName } from '../utils/stateUtils';
 
 export interface FinancialYear {
   id: string;
@@ -54,7 +55,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             defaultSalesOrderTerms: d.DefaultSalesOrderTerms || d.defaultSalesOrderTerms || '',
             defaultSalesInvoiceTerms: d.DefaultSalesInvoiceTerms || d.defaultSalesInvoiceTerms || '',
             LogoUrl: d.LogoUrl || d.logoUrl || d.logo || '',
-            StateCode: d.StateCode || d.stateCode || d.state_code || ''
+            StateCode: d.StateCode || d.stateCode || d.state_code || '',
+            StateName: getStateName(d.StateName || d.stateName || d.State || d.state || d.StateCode || d.stateCode || d.state_code)
           }));
           setCompanies(comps);
           if (comps.length > 0) {

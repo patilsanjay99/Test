@@ -70,7 +70,7 @@ export function PurchaseOrderPrint() {
   // Compute total tax, taxable subtotal
   let taxableSubtotal = 0;
   let totalGstAmount = 0;
-  let computedGrandTotal = 0;
+  let totalDiscountAmount = 0;
 
   lines.forEach((line: any) => {
     const qty = parseFloat(line.qty) || 0;
@@ -85,8 +85,12 @@ export function PurchaseOrderPrint() {
 
     taxableSubtotal += taxable;
     totalGstAmount += gst;
+    totalDiscountAmount += discount;
   });
-  computedGrandTotal = taxableSubtotal + totalGstAmount;
+
+  const rawGrandTotal = taxableSubtotal + totalGstAmount;
+  const computedGrandTotal = Math.round(rawGrandTotal);
+  const roundedOff = computedGrandTotal - rawGrandTotal;
 
   return (
     <div className="max-w-full mx-auto px-4 lg:px-8 w-full pb-12 print:pb-0 print:m-0 print:max-w-none print:w-full">
@@ -214,6 +218,7 @@ export function PurchaseOrderPrint() {
                 <th className="py-2.5 px-2 text-center font-bold w-24 text-green-900 border-b border-green-800">HSN/SAC</th>
                 <th className="py-2.5 px-2 text-right font-bold w-20 text-green-900 border-b border-green-800">Qty</th>
                 <th className="py-2.5 px-2 text-right font-bold w-28 text-green-900 border-b border-green-800">Rate (₹)</th>
+                <th className="py-2.5 px-2 text-right font-bold w-20 text-green-900 border-b border-green-800">Disc %</th>
                 <th className="py-2.5 px-2 text-right font-bold w-20 text-green-900 border-b border-green-800">GST %</th>
                 <th className="py-2.5 px-2 text-right font-bold w-32 text-green-900 border-b border-green-800">Total (₹)</th>
               </tr>
@@ -239,7 +244,8 @@ export function PurchaseOrderPrint() {
                     </td>
                     <td className="py-3 px-2 text-center text-gray-600 font-mono">{line.hsn || '-'}</td>
                     <td className="py-3 px-2 text-right font-semibold font-mono">{qty}</td>
-                    <td className="py-3 px-2 text-right font-mono">{rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3 px-2 text-right font-mono">{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="py-3 px-2 text-right text-gray-600 font-mono">{discountPercent > 0 ? discountPercent + '%' : '-'}</td>
                     <td className="py-3 px-2 text-right text-gray-600 font-mono">{gstRatePercent}%</td>
                     <td className="py-3 px-2 text-right font-bold font-mono">
                       {totalItemAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -256,13 +262,31 @@ export function PurchaseOrderPrint() {
           <div className="w-80">
             <div className="space-y-1.5 border-t border-gray-300 pt-3">
               <div className="flex justify-between text-xs text-gray-500">
-                <span>Taxable Amount (₹):</span>
-                <span className="font-mono">{taxableSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>Gross Subtotal:</span>
+                <span className="font-mono">{(taxableSubtotal + totalDiscountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
+              {totalDiscountAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-xs font-bold text-green-700">
+                    <span>Total Discount:</span>
+                    <span className="font-mono">-{(totalDiscountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Taxable Amount (₹):</span>
+                    <span className="font-mono">{taxableSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-xs text-gray-500">
                 <span>GST Outflow (₹):</span>
                 <span className="font-mono">{totalGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
+              {Math.abs(roundedOff) > 0.001 && (
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Rounded Off (₹):</span>
+                  <span className="font-mono">{roundedOff.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
               <div className="flex justify-between py-2 border-t-2 border-green-800 text-lg bg-green-50/50 px-2 rounded print:p-0 print:bg-transparent">
                 <span className="font-bold text-green-900">Grand Total:</span>
                 <span className="font-black text-green-800 font-mono">

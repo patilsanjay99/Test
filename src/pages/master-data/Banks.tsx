@@ -146,7 +146,7 @@ export function Banks() {
                       <td className="py-3 px-6 text-sm text-gray-600 font-mono">{b.IFSCCode || '-'}</td>
                       <td className="py-3 px-6 text-sm text-gray-600">{b.AccountType || '-'}</td>
                       <td className="py-3 px-6 text-sm font-bold text-gray-900 text-right">
-                        ₹{Number(b.OpeningBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {b.BalanceType}
+                        ₹{Number(b.OpeningBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {b.BalanceType}
                       </td>
                       <td className="py-3 px-6">
                         <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -126,45 +126,111 @@ export function QuotationPrint() {
         </div>
 
         {/* Items Table */}
-        <table className="w-full mb-8 border-collapse">
-          <thead>
-            <tr className="border-y border-gray-300 bg-gray-50 print:bg-transparent">
-              <th className="py-3 px-2 text-left font-bold w-12 border-x border-gray-300">#</th>
-              <th className="py-3 px-2 text-left font-bold border-x border-gray-300">Item Description</th>
-              <th className="py-3 px-2 text-center font-bold w-24 border-x border-gray-300">HSN/SAC</th>
-              <th className="py-3 px-2 text-right font-bold w-20 border-x border-gray-300">Qty</th>
-              <th className="py-3 px-2 text-right font-bold w-28 border-x border-gray-300">Rate (₹)</th>
-              <th className="py-3 px-2 text-right font-bold w-24 border-x border-gray-300">GST %</th>
-              <th className="py-3 px-2 text-right font-bold w-32 border-x border-gray-300">Amount (₹)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((line: any, index: number) => {
-              const amount = (line.qty || 1) * (line.rate || 0);
-              return (
-                <tr key={index} className="border-b border-gray-200">
-                  <td className="py-3 px-2 text-left border-x border-gray-300">{index + 1}</td>
-                  <td className="py-3 px-2 text-left border-x border-gray-300">{line.item || 'Item'}</td>
-                  <td className="py-3 px-2 text-center border-x border-gray-300">{line.hsn || '-'}</td>
-                  <td className="py-3 px-2 text-right border-x border-gray-300">{line.qty || 0}</td>
-                  <td className="py-3 px-2 text-right border-x border-gray-300">{(line.rate || 0).toFixed(2)}</td>
-                  <td className="py-3 px-2 text-right border-x border-gray-300">{line.gstRate ? line.gstRate + '%' : '-'}</td>
-                  <td className="py-3 px-2 text-right font-medium border-x border-gray-300">{amount.toFixed(2)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {(() => {
+          let calculatedSubtotal = 0;
+          let calculatedTax = 0;
+          let calculatedDiscount = 0;
 
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
-          <div className="w-64">
-            <div className="flex justify-between py-3 border-b-2 border-gray-800 text-lg">
-              <span className="font-bold">Total (₹):</span>
-              <span className="font-bold">{quotation.TotalAmount ? Number(quotation.TotalAmount).toFixed(2) : '0.00'}</span>
-            </div>
-          </div>
-        </div>
+          lines.forEach((line: any) => {
+            const gross = (line.qty || 1) * (line.rate || 0);
+            const discAmount = gross * ((line.discount || 0) / 100);
+            const taxAmount = (gross - discAmount) * ((line.gstRate || 0) / 100);
+            
+            calculatedSubtotal += (gross - discAmount);
+            calculatedTax += taxAmount;
+            calculatedDiscount += discAmount;
+          });
+
+          const grandTotalRaw = calculatedSubtotal + calculatedTax;
+          const grandTotalRounded = Math.round(grandTotalRaw);
+          const roundedOff = grandTotalRounded - grandTotalRaw;
+
+          return (
+            <>
+              <table className="w-full mb-8 border-collapse">
+                <thead>
+                  <tr className="border-y border-gray-300 bg-gray-50 print:bg-transparent">
+                    <th className="py-3 px-2 text-left font-bold w-12 border-x border-gray-300">#</th>
+                    <th className="py-3 px-2 text-left font-bold border-x border-gray-300">Item Description</th>
+                    <th className="py-3 px-2 text-center font-bold w-24 border-x border-gray-300">HSN/SAC</th>
+                    <th className="py-3 px-2 text-right font-bold w-20 border-x border-gray-300">Qty</th>
+                    <th className="py-3 px-2 text-right font-bold w-28 border-x border-gray-300">Rate (₹)</th>
+                    <th className="py-3 px-2 text-right font-bold w-24 border-x border-gray-300">Disc %</th>
+                    <th className="py-3 px-2 text-right font-bold w-24 border-x border-gray-300">GST %</th>
+                    <th className="py-3 px-2 text-right font-bold w-32 border-x border-gray-300">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line: any, index: number) => {
+                    const gross = (line.qty || 1) * (line.rate || 0);
+                    const discAmount = gross * ((line.discount || 0) / 100);
+                    const taxAmount = (gross - discAmount) * ((line.gstRate || 0) / 100);
+                    const totalAmount = (gross - discAmount) + taxAmount;
+                    
+                    return (
+                      <tr key={index} className="border-b border-gray-200">
+                        <td className="py-3 px-2 text-left border-x border-gray-300">{index + 1}</td>
+                        <td className="py-3 px-2 text-left border-x border-gray-300">{line.item || 'Item'}</td>
+                        <td className="py-3 px-2 text-center border-x border-gray-300">{line.hsn || '-'}</td>
+                        <td className="py-3 px-2 text-right border-x border-gray-300">{line.qty || 0}</td>
+                        <td className="py-3 px-2 text-right border-x border-gray-300">{(line.rate || 0).toFixed(2)}</td>
+                        <td className="py-3 px-2 text-right border-x border-gray-300">{line.discount ? line.discount + '%' : '-'}</td>
+                        <td className="py-3 px-2 text-right border-x border-gray-300">{line.gstRate ? line.gstRate + '%' : '-'}</td>
+                        <td className="py-3 px-2 text-right font-medium border-x border-gray-300">{totalAmount.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div className="flex justify-end mb-8">
+                <div className="w-64">
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600 font-medium">Gross Subtotal:</span>
+                    <span className="font-bold">
+                      {(calculatedSubtotal + calculatedDiscount).toFixed(2)}
+                    </span>
+                  </div>
+                  {calculatedDiscount > 0 && (
+                    <>
+                      <div className="flex justify-between py-2 border-b border-gray-200 text-green-700">
+                        <span className="font-medium">Total Discount:</span>
+                        <span className="font-bold">
+                          -{calculatedDiscount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-gray-600 font-medium">Taxable Subtotal:</span>
+                        <span className="font-bold">
+                          {calculatedSubtotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600 font-medium">Tax/GST:</span>
+                    <span className="font-bold">
+                      {calculatedTax.toFixed(2)}
+                    </span>
+                  </div>
+                  {Math.abs(roundedOff) > 0.001 && (
+                    <div className="flex justify-between py-2 border-b border-gray-200">
+                      <span className="text-gray-600 font-medium">Rounded Off:</span>
+                      <span className="font-bold">
+                        {roundedOff.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-3 border-b-2 border-gray-800 text-lg">
+                    <span className="font-bold">Total (₹):</span>
+                    <span className="font-bold">{grandTotalRounded.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Terms & Conditions */}
         {quotation.TermsAndConditions && (

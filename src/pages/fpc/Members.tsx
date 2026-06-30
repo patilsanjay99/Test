@@ -135,7 +135,7 @@ export function Members() {
                       {member.SharesAllocated || 0}
                     </td>
                     <td className="p-4 text-sm text-gray-900 font-mono text-right">
-                      ₹{((member.SharesAllocated || 0) * (member.FaceValue || 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{((member.SharesAllocated || 0) * (member.FaceValue || 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       {hasPermission('/fpc/members', 'edit') && (

@@ -313,7 +313,7 @@ export function Shares() {
                         {sharesCount}
                       </td>
                       <td className="p-4 text-sm text-gray-900 font-mono text-right font-semibold">
-                        ₹{(amtVal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{(amtVal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-xs text-gray-600">
                         {txType !== 'Transfer' ? (
@@ -387,10 +387,10 @@ export function Shares() {
                         {sharesAllocated}
                       </td>
                       <td className="p-4 text-sm text-gray-600 text-right font-mono">
-                        ₹{(fValue).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{(fValue).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-sm text-emerald-700 font-bold text-right font-mono">
-                        ₹{(totalEstVal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{(totalEstVal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   );

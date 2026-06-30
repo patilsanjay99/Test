@@ -16,6 +16,7 @@ export interface Company {
   defaultSalesInvoiceTerms?: string;
   LogoUrl?: string;
   StateCode?: string;
+  StateName?: string;
 }
 
 // Define other core types here as the app expands

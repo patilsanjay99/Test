@@ -447,10 +447,10 @@ export function Loans() {
                         </td>
                         <td className="p-4 text-sm text-gray-600">{loan.LoanType || loan.loantype}</td>
                         <td className="p-4 text-sm text-gray-900 text-right font-medium">
-                          {(parseFloat(loan.PrincipalAmount ?? loan.principalamount ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {(parseFloat(loan.PrincipalAmount ?? loan.principalamount ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className={`p-4 text-sm font-bold text-right ${isClosed ? 'text-gray-500' : 'text-red-600'}`}>
-                          {outstandingAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {outstandingAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
@@ -531,7 +531,7 @@ export function Loans() {
                           <div className="text-xs text-gray-500">{memberObj?.MemberId || `ID: ${mId}`}</div>
                         </td>
                         <td className="p-4 text-sm text-emerald-700 font-black text-right">
-                          {(parseFloat(rep.AmountPaid ?? rep.amountpaid ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {(parseFloat(rep.AmountPaid ?? rep.amountpaid ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-4 text-sm text-gray-600 max-w-sm truncate" title={rep.Remarks ?? rep.remarks}>
                           {rep.Remarks ?? rep.remarks}
@@ -591,7 +591,7 @@ export function Loans() {
               <div className="col-span-2 bg-white border border-emerald-200 p-2 rounded-md flex justify-between items-center mt-2">
                 <span className="font-bold text-slate-700">Outstanding Balance:</span>
                 <span className="font-mono text-sm font-black text-red-600">
-                  ₹{(parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{(parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
@@ -629,11 +629,11 @@ export function Loans() {
               <div className="grid grid-cols-2 gap-2 bg-slate-100 p-2.5 rounded border border-slate-200">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Principal Component:</span>
-                  <span className="font-mono font-bold text-slate-800 text-sm">₹{repayPrincipal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono font-bold text-slate-800 text-sm">₹{repayPrincipal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Interest Component:</span>
-                  <span className="font-mono font-bold text-slate-800 text-sm">₹{repayInterest.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono font-bold text-slate-800 text-sm">₹{repayInterest.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
@@ -641,12 +641,12 @@ export function Loans() {
               <div className="bg-blue-50 border border-blue-200 p-2.5 rounded flex justify-between items-center text-xs">
                 <div>
                   <span className="text-slate-600 block font-medium">New Principal Balance:</span>
-                  <span className="text-slate-400 line-through">₹{(parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-slate-400 line-through">₹{(parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider">Estimated</span>
                   <span className="font-mono font-black text-blue-700 block text-sm mt-0.5">
-                    ₹{Math.max(0, parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0) - repayPrincipal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{Math.max(0, parseFloat(selectedLoan.Outstanding ?? selectedLoan.outstanding ?? 0) - repayPrincipal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -812,7 +812,7 @@ export function Loans() {
                 <div className="border-t border-slate-200 pt-3 col-span-2 sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
                     <span className="font-semibold text-slate-500 uppercase">Principal:</span>
-                    <p className="font-extrabold text-sm text-slate-900 mt-0.5">₹{p.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    <p className="font-extrabold text-sm text-slate-900 mt-0.5">₹{p.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>
                     <span className="font-semibold text-slate-500 uppercase">Interest Rate:</span>
@@ -824,7 +824,7 @@ export function Loans() {
                   </div>
                   <div>
                     <span className="font-semibold text-slate-500 uppercase">Total Payable:</span>
-                    <p className="font-extrabold text-sm text-blue-700 mt-0.5">₹{totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    <p className="font-extrabold text-sm text-blue-700 mt-0.5">₹{totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               </div>
@@ -941,7 +941,7 @@ export function Loans() {
                             </tr>
                             <tr>
                               <td class="meta-label">Principal Amount</td>
-                              <td style="font-weight: bold;">₹${p.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td style="font-weight: bold;">₹${p.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td class="meta-label">Interest Rate</td>
                               <td>${r}% p.a. (Reducing)</td>
                             </tr>
@@ -949,7 +949,7 @@ export function Loans() {
                               <td class="meta-label">Tenure (Months)</td>
                               <td>${n}</td>
                               <td class="meta-label">Total Payable</td>
-                              <td style="font-weight: bold; color: #1e40af;">₹${totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td style="font-weight: bold; color: #1e40af;">₹${totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             </tr>
                           </table>
 
@@ -1127,7 +1127,7 @@ export function Loans() {
                             </div>
                             <div class="meta-box">
                               <span>Principal Amount</span>
-                              <p>₹${p.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                              <p>₹${p.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                             <div class="meta-box">
                               <span>Interest Rate</span>
@@ -1139,7 +1139,7 @@ export function Loans() {
                             </div>
                             <div class="meta-box">
                               <span>Total Payable Amount</span>
-                              <p style="color: #1e40af;">₹${totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                              <p style="color: #1e40af;">₹${totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                           </div>
 

@@ -416,6 +416,7 @@ export function SalesReturnForm() {
                             required
                             type="number" 
                             min="0"
+                            step="any"
                             value={line.rate || ''}
                             onChange={e => updateLine(line.id, 'rate', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right font-semibold"

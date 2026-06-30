@@ -279,6 +279,7 @@ export function StockAdjustmentForm() {
                       <td className="p-2 border-r border-blue-900">
                         <input 
                           type="number" 
+                          step="any"
                           value={item.newQty || ''}
                           onChange={(e) => updateItemQty(item.id, Number(e.target.value))}
                           className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono font-bold text-gray-800" 

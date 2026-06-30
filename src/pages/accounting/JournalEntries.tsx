@@ -250,7 +250,7 @@ export function JournalEntries() {
                         )}
                       </td>
                       <td className="p-4 text-sm text-gray-900 font-mono font-bold text-right">
-                        {(entry.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {(entry.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${

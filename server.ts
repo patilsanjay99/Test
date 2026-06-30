@@ -6,6 +6,16 @@ import fs from "fs";
 import { installLotsApi, applySalesInvoiceToLots, revertSalesInvoiceFromLots } from "./server-lots-logic";
 import { createServer as createViteServer } from "vite";
 import JSZip from "jszip";
+import { GoogleGenAI, Type } from "@google/genai";
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 // Load MSSQL variables
 let mssqlPool: any = null;
@@ -1263,12 +1273,14 @@ async function startServer() {
                   TotalAmount DECIMAL(18,2) DEFAULT 0,
                   Status NVARCHAR(50) DEFAULT 'Draft',
                   InvoiceDate NVARCHAR(50) NULL,
+                  PaymentTerms NVARCHAR(255) NULL,
                   ItemsData NVARCHAR(MAX) NULL
               );
           END
           ELSE
           BEGIN
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesInvoices]') AND name = 'ItemsData') ALTER TABLE dbo.SalesInvoices ADD ItemsData NVARCHAR(MAX) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SalesInvoices]') AND name = 'PaymentTerms') ALTER TABLE dbo.SalesInvoices ADD PaymentTerms NVARCHAR(255) NULL;
           END
 
           -- SalesReturns Table Migration
@@ -1425,6 +1437,74 @@ async function startServer() {
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[StockAdjustments]') AND name = 'Reason') ALTER TABLE dbo.StockAdjustments ADD Reason NVARCHAR(MAX) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[StockAdjustments]') AND name = 'Status') ALTER TABLE dbo.StockAdjustments ADD Status NVARCHAR(50) NULL;
               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[StockAdjustments]') AND name = 'ItemsData') ALTER TABLE dbo.StockAdjustments ADD ItemsData NVARCHAR(MAX) NULL;
+          END
+
+          -- DemandEnquiries Table Migration
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.DemandEnquiries (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL,
+                  enquiryNo NVARCHAR(50) NULL,
+                  expectedDate NVARCHAR(50) NULL,
+                  buyer NVARCHAR(255) NULL,
+                  commodity NVARCHAR(255) NULL,
+                  totalQuantity NVARCHAR(50) NULL,
+                  qualitySpecs NVARCHAR(MAX) NULL,
+                  deliveryLocation NVARCHAR(MAX) NULL,
+                  status NVARCHAR(50) NULL,
+                  remarks NVARCHAR(MAX) NULL,
+                  targetPrice NVARCHAR(50) NULL,
+                  CreatedAt DATETIME DEFAULT GETDATE()
+              );
+          END
+          ELSE
+          BEGIN
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'CompanyId') ALTER TABLE dbo.DemandEnquiries ADD CompanyId INT NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'enquiryNo') ALTER TABLE dbo.DemandEnquiries ADD enquiryNo NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'expectedDate') ALTER TABLE dbo.DemandEnquiries ADD expectedDate NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'buyer') ALTER TABLE dbo.DemandEnquiries ADD buyer NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'commodity') ALTER TABLE dbo.DemandEnquiries ADD commodity NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'totalQuantity') ALTER TABLE dbo.DemandEnquiries ADD totalQuantity NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'qualitySpecs') ALTER TABLE dbo.DemandEnquiries ADD qualitySpecs NVARCHAR(MAX) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'deliveryLocation') ALTER TABLE dbo.DemandEnquiries ADD deliveryLocation NVARCHAR(MAX) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'status') ALTER TABLE dbo.DemandEnquiries ADD status NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'remarks') ALTER TABLE dbo.DemandEnquiries ADD remarks NVARCHAR(MAX) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[DemandEnquiries]') AND name = 'targetPrice') ALTER TABLE dbo.DemandEnquiries ADD targetPrice NVARCHAR(50) NULL;
+          END
+
+          -- FarmerPlannings Table Migration
+          IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND type in (N'U'))
+          BEGIN
+              CREATE TABLE dbo.FarmerPlannings (
+                  Id INT IDENTITY(1,1) PRIMARY KEY,
+                  CompanyId INT NULL,
+                  farmer NVARCHAR(255) NULL,
+                  cropName NVARCHAR(255) NULL,
+                  variety NVARCHAR(255) NULL,
+                  sowingDate NVARCHAR(50) NULL,
+                  expectedHarvestDate NVARCHAR(50) NULL,
+                  landParcel NVARCHAR(255) NULL,
+                  committedArea NVARCHAR(50) NULL,
+                  marketDemand NVARCHAR(50) NULL,
+                  expectedYield NVARCHAR(50) NULL,
+                  remarks NVARCHAR(MAX) NULL,
+                  CreatedAt DATETIME DEFAULT GETDATE()
+              );
+          END
+          ELSE
+          BEGIN
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'CompanyId') ALTER TABLE dbo.FarmerPlannings ADD CompanyId INT NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'farmer') ALTER TABLE dbo.FarmerPlannings ADD farmer NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'cropName') ALTER TABLE dbo.FarmerPlannings ADD cropName NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'variety') ALTER TABLE dbo.FarmerPlannings ADD variety NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'sowingDate') ALTER TABLE dbo.FarmerPlannings ADD sowingDate NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'expectedHarvestDate') ALTER TABLE dbo.FarmerPlannings ADD expectedHarvestDate NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'landParcel') ALTER TABLE dbo.FarmerPlannings ADD landParcel NVARCHAR(255) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'committedArea') ALTER TABLE dbo.FarmerPlannings ADD committedArea NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'marketDemand') ALTER TABLE dbo.FarmerPlannings ADD marketDemand NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'expectedYield') ALTER TABLE dbo.FarmerPlannings ADD expectedYield NVARCHAR(50) NULL;
+              IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[FarmerPlannings]') AND name = 'remarks') ALTER TABLE dbo.FarmerPlannings ADD remarks NVARCHAR(MAX) NULL;
           END
 
           -- AccountGroups Table Migration
@@ -1761,6 +1841,61 @@ Please inspect and verify the following potential causes:
       }
   });
 
+  apiRouter.post("/market-intelligence", async (req, res) => {
+    try {
+      const { items, state } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.json({ intelligence: [] });
+      }
+
+      const prompt = `Provide market price intelligence for the following agricultural commodities in the state of "${state || 'Maharashtra'}", India. 
+      Items: ${items.join(', ')}.
+      
+      Instructions:
+      1. Use Google Search to find the latest mandi rates or market prices in Indian Rupees (INR) for these items in ${state || 'Maharashtra'}.
+      2. Determine the current average price per Quintal (100 KG) or suitable unit.
+      3. Identify the 30-day price trend (Rising, Falling, or Stable).
+      4. Provide a concise procurement advice for a Farmer Producer Company (FPC) regarding these items (max 12 words).
+      
+      Format the output strictly as a JSON array of objects with these exact keys: 'commodity', 'currentPrice', 'trend', 'advice'. 
+      If no data is found for an item, still include it with "Data Unavailable" for price and "Stable" for trend.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                commodity: { type: Type.STRING },
+                currentPrice: { type: Type.STRING },
+                trend: { type: Type.STRING },
+                advice: { type: Type.STRING }
+              },
+              required: ["commodity", "currentPrice", "trend", "advice"]
+            }
+          }
+        }
+      });
+
+      let text = response.text || '[]';
+      // Strip markdown code blocks if present
+      if (text.includes('```')) {
+        text = text.replace(/```json|```/g, '').trim();
+      }
+      
+      const intelligence = JSON.parse(text);
+      res.json({ intelligence });
+    } catch (err: any) {
+      console.error("Market Intelligence error:", err);
+      res.status(500).json({ error: "Failed to fetch market intelligence", message: err.message });
+    }
+  });
+
   apiRouter.post("/auth/change-password", async (req, res) => {
       try {
           const { userId, email, currentPassword, newPassword } = req.body;
@@ -1861,11 +1996,13 @@ Please inspect and verify the following potential causes:
 
       addFilesToZip(process.cwd(), zip);
       
-      res.attachment('fpc-source-code.zip');
       const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      res.attachment('fpc-source-code.zip');
+      res.set('Content-Type', 'application/zip');
       res.send(buffer);
     } catch (err: any) {
-      res.status(500).send({error: err.message});
+      console.error("Source export error:", err);
+      res.status(500).json({error: err.message});
     }
   });
 
@@ -2084,11 +2221,13 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
 `;
       zip.file('README_DEPLOY.md', readmeContent);
       
-      res.attachment('fpc-cloud-deployment-package.zip');
       const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      res.attachment('fpc-cloud-deployment-package.zip');
+      res.set('Content-Type', 'application/zip');
       res.send(buffer);
     } catch (err: any) {
-      res.status(500).send({ error: err.message });
+      console.error("Export error:", err);
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -3992,16 +4131,16 @@ DB_ENCRYPT="false"  # Change to true if your hosting requires SSL/TLS encrypted 
           const vendorName = data.Vendor_NAME || data.VendorName || data.vendorname || '';
           if (vendorName) {
               existingRecord = await executeGet(
-                  `SELECT Vendor_ID, Vendor_Id, Id, id FROM Vendors WHERE (LOWER(TRIM(Vendor_NAME)) = ? OR LOWER(TRIM(VendorName)) = ?) AND (COMPANYID = ? OR CompanyId = ? OR COMPANYID IS NULL OR CompanyId IS NULL)`,
-                  [vendorName.trim().toLowerCase(), vendorName.trim().toLowerCase(), resolvedCid, resolvedCid]
+                  `SELECT Vendor_ID FROM Vendors WHERE LOWER(TRIM(Vendor_NAME)) = ? AND (COMPANYID = ? OR COMPANYID IS NULL)`,
+                  [vendorName.trim().toLowerCase(), resolvedCid]
               );
           }
       } else if (tableLower === 'customers') {
           const customerName = data.CustomerName || data.Name || data.customername || '';
           if (customerName) {
               existingRecord = await executeGet(
-                  `SELECT Id, id FROM Customers WHERE (LOWER(TRIM(CustomerName)) = ? OR LOWER(TRIM(Name)) = ?) AND (CompanyId = ? OR CompanyId IS NULL)`,
-                  [customerName.trim().toLowerCase(), customerName.trim().toLowerCase(), resolvedCid]
+                  `SELECT Id, id FROM Customers WHERE LOWER(TRIM(CustomerName)) = ? AND (CompanyId = ? OR CompanyId IS NULL)`,
+                  [customerName.trim().toLowerCase(), resolvedCid]
               );
           }
       }

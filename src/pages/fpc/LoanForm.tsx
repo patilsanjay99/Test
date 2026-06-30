@@ -251,6 +251,7 @@ export function LoanForm() {
                   required 
                   type="number" 
                   min="1" 
+                  step="any"
                   placeholder="0.00" 
                   value={amount || ''} 
                   onChange={(e) => setAmount(Math.max(0, parseFloat(e.target.value) || 0))} 
@@ -268,7 +269,7 @@ export function LoanForm() {
                   required 
                   type="number" 
                   min="0" 
-                  step="0.01" 
+                  step="any" 
                   placeholder="0.0" 
                   value={rate || ''} 
                   onChange={(e) => setRate(Math.max(0, parseFloat(e.target.value) || 0))} 

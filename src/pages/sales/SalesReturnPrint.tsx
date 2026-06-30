@@ -166,8 +166,8 @@ export function SalesReturnPrint() {
                     <td className="p-3 font-semibold text-slate-800">{line.item}</td>
                     <td className="p-3 text-gray-600 text-xs">{line.reason || salesReturn.Remarks || 'No specified damage'}</td>
                     <td className="p-3 text-right font-mono font-medium">{line.qty}</td>
-                    <td className="p-3 text-right font-mono">₹{parseFloat(line.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-3 text-right font-mono font-bold">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right font-mono">₹{parseFloat(line.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right font-mono font-bold">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 );
               })}

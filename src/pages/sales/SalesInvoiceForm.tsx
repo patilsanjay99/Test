@@ -23,6 +23,7 @@ interface InvoiceLine {
   discount: number;
   gstRate: number;
   unit?: string;
+  demandEnquiryNo?: string;
 }
 
 export function SalesInvoiceForm() {
@@ -36,24 +37,33 @@ export function SalesInvoiceForm() {
   const [originalLines, setOriginalLines] = useState<InvoiceLine[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentTerms, setPaymentTerms] = useState('Net 0 (Immediate)');
   const [saving, setSaving] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(isEditing);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [lots, setLots] = useState<any[]>([]);
+  const [demandEnquiries, setDemandEnquiries] = useState<any[]>([]);
+  const [allSalesInvoices, setAllSalesInvoices] = useState<any[]>([]);
+  const [showDemandModal, setShowDemandModal] = useState(false);
+  const [currentLineId, setCurrentLineId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/v1/data/InventoryItems?CompanyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => []),
       fetch(`/api/v1/data/Customers?CompanyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => []),
       fetch(`/api/data/locations?CompanyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => []),
-      fetch(`/api/v1/inventory/lots?companyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => [])
-    ]).then(([invItems, custs, locs, activeLots]) => {
+      fetch(`/api/v1/inventory/lots?companyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => []),
+      fetch(`/api/v1/data/DemandEnquiries?CompanyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => []),
+      fetch(`/api/v1/data/SalesInvoices?CompanyId=${activeCompany?.id || ''}`).then(res => res.json()).catch(() => [])
+    ]).then(([invItems, custs, locs, activeLots, demands, sales]) => {
       setInventoryItems(Array.isArray(invItems) ? invItems : []);
       setCustomers(Array.isArray(custs) ? custs : []);
       setLocations(Array.isArray(locs) ? locs : []);
       setLots(Array.isArray(activeLots) ? activeLots : []);
+      setDemandEnquiries(Array.isArray(demands) ? demands : []);
+      setAllSalesInvoices(Array.isArray(sales) ? sales : []);
     }).catch(console.error);
   }, [activeCompany?.id]);
 
@@ -66,6 +76,7 @@ export function SalesInvoiceForm() {
           if (data) {
             setCustomerId(String(data.CustomerId || ''));
             setInvoiceDate(formatDateForInput(data.InvoiceDate || ''));
+            if (data.PaymentTerms) setPaymentTerms(data.PaymentTerms);
             if (data.ItemsData) {
               try {
                 const parsed = JSON.parse(data.ItemsData);
@@ -173,8 +184,41 @@ export function SalesInvoiceForm() {
       purchaseInvoiceNo: '',
       purchaseLineId: '',
       maxQty: 0,
-      unit: item.Unit || item.unit || ''
+      unit: item.Unit || item.unit || '',
+      demandEnquiryNo: ''
     } : l));
+
+    // Check for pending demand for selected product and buyer
+    const selCust = customers.find(c => String(c.Id || c.id) === String(customerId));
+    const buyerName = selCust ? (selCust.CustomerName || selCust.Customer_NAME || selCust.Name || '') : '';
+    const matchingDemands = demandEnquiries.filter(d => 
+      String(d.commodity).trim().toLowerCase() === String(item.Name).trim().toLowerCase() && 
+      String(d.buyer).trim().toLowerCase() === String(buyerName).trim().toLowerCase() &&
+      d.status !== 'Rejected'
+    );
+
+    if (matchingDemands.length > 0) {
+      setCurrentLineId(id);
+      setShowDemandModal(true);
+    }
+  };
+
+  const getSuppliedDemandQty = (enquiryNo: string) => {
+    let supplied = 0;
+    allSalesInvoices.forEach(inv => {
+        // If we are editing, we ignore the current invoice's contribution to "already supplied"
+        // so that the user sees the state before this invoice.
+        if (isEditing && String(inv.Id || inv.id) === String(id)) return;
+        try {
+            const items = JSON.parse(inv.ItemsData || '[]');
+            items.forEach((it: any) => {
+                if (it.demandEnquiryNo === enquiryNo) {
+                    supplied += Number(it.qty || 0);
+                }
+            });
+        } catch(e) {}
+    });
+    return supplied;
   };
 
   const selectPurchaseLot = (id: string, lot: any) => {
@@ -212,7 +256,11 @@ export function SalesInvoiceForm() {
       totalGst += gst;
     });
 
-    return { subtotal, totalDiscount, totalGst, grandTotal: subtotal + totalGst };
+    const rawGrandTotal = subtotal + totalGst;
+    const grandTotal = Math.round(rawGrandTotal);
+    const roundedOff = grandTotal - rawGrandTotal;
+
+    return { subtotal, totalDiscount, totalGst, grandTotal, roundedOff };
   };
 
   const totals = calculateTotals();
@@ -222,6 +270,17 @@ export function SalesInvoiceForm() {
     
     // Validate quantities
     for (const l of lines) {
+        if (l.demandEnquiryNo) {
+            const de = demandEnquiries.find(d => d.enquiryNo === l.demandEnquiryNo);
+            if (de) {
+                const totalDemand = parseFloat(de.totalQuantity || '0');
+                const alreadySupplied = getSuppliedDemandQty(l.demandEnquiryNo);
+                const pendingDemand = Math.max(0, totalDemand - alreadySupplied);
+                if (l.qty > pendingDemand) {
+                    return alert(`Quantity for ${l.item} (${l.qty}) exceeds pending demand (${pendingDemand}) for enquiry ${l.demandEnquiryNo}.`);
+                }
+            }
+        }
         if (l.maxQty !== undefined && l.qty > l.maxQty) {
             return alert(`Quantity for ${l.item} exceeds maximum available (${l.maxQty}) for the selected lot.`);
         }
@@ -236,6 +295,7 @@ export function SalesInvoiceForm() {
         CustomerId: customerId,
         CompanyId: activeCompany?.id || null,
         FinancialYearId: activeFinancialYear?.id || null,
+        PaymentTerms: paymentTerms,
         TotalAmount: totals.grandTotal,
         Status: status,
         InvoiceDate: invoiceDate,
@@ -330,10 +390,13 @@ export function SalesInvoiceForm() {
                   Payment Terms
                 </div>
                 <div className="bg-[#f1f5f9] p-1.5 sm:col-span-2 flex items-center">
-                  <select className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] cursor-pointer">
-                    <option>Net 0 (Immediate)</option>
-                    <option>Net 15</option>
-                  </select>
+                  <input 
+                    type="text" 
+                    value={paymentTerms} 
+                    onChange={e => setPaymentTerms(e.target.value)} 
+                    className="w-full px-3 py-1.5 border border-[#8faad8] rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4]" 
+                    placeholder="e.g. Net 0 (Immediate)"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 md:border-b-0 border-b border-blue-900 min-h-[48px] items-stretch bg-[#f1f5f9]">
@@ -359,14 +422,15 @@ export function SalesInvoiceForm() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#f1f5f9] text-gray-800 text-xs font-bold uppercase tracking-wider border-b border-blue-900">
-                    <th className="p-3 border-r border-blue-900 min-w-[200px]">Item</th>
-                    <th className="p-3 w-48 border-r border-blue-900">Location</th>
+                    <th className="p-3 border-r border-blue-900 min-w-[180px]">Item</th>
+                    <th className="p-3 w-32 border-r border-blue-900">Demand Link</th>
+                    <th className="p-3 w-40 border-r border-blue-900">Location</th>
                     <th className="p-3 w-40 border-r border-blue-900">Supplier</th>
                     <th className="p-3 w-40 border-r border-blue-900">Pur. Inv</th>
-                    <th className="p-3 w-32 text-center border-r border-blue-900">Qty {isEditing ? '' : '(Max)'}</th>
+                    <th className="p-3 w-32 text-center border-r border-blue-900">Qty</th>
                     <th className="p-3 w-20 text-center border-r border-blue-900">Unit</th>
-                    <th className="p-3 w-24 text-right border-r border-blue-900">Rate</th>
-                    <th className="p-3 w-16 text-right border-r border-blue-900">Disc %</th>
+                    <th className="p-3 w-32 text-right border-r border-blue-900">Rate</th>
+                    <th className="p-3 w-24 text-right border-r border-blue-900">Disc %</th>
                     <th className="p-3 w-20 text-center border-r border-blue-900">GST %</th>
                     <th className="p-3 w-28 text-right border-r border-blue-900">Total</th>
                     <th className="p-3 w-10 text-center"></th>
@@ -405,6 +469,35 @@ export function SalesInvoiceForm() {
                             placeholder="Select item..."
                             required={true}
                           />
+                        </td>
+                        <td className="p-2 w-32 border-r border-blue-900 text-center">
+                          {line.demandEnquiryNo ? (
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1 rounded border border-blue-200">{line.demandEnquiryNo}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setCurrentLineId(line.id);
+                                  setShowDemandModal(true);
+                                }}
+                                className="text-[9px] text-gray-500 hover:text-blue-600 underline mt-0.5"
+                              >
+                                Change
+                              </button>
+                            </div>
+                          ) : (
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                if (!line.item) return alert("Please select an item first.");
+                                setCurrentLineId(line.id);
+                                setShowDemandModal(true);
+                              }}
+                              className="text-[10px] text-blue-600 hover:underline font-bold"
+                            >
+                              Link Demand
+                            </button>
+                          )}
                         </td>
                         <td className="p-2 w-48 border-r border-blue-900">
                           <select 
@@ -484,6 +577,7 @@ export function SalesInvoiceForm() {
                             required
                             type="number" 
                             min="0"
+                            step="any"
                             value={line.rate || ''}
                             onChange={e => updateLine(line.id, 'rate', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right"
@@ -492,7 +586,7 @@ export function SalesInvoiceForm() {
                         <td className="p-2 border-r border-blue-900">
                           <input 
                             type="number" 
-                            min="0" max="100"
+                            min="0" max="100" step="0.01"
                             value={line.discount || ''}
                             onChange={e => updateLine(line.id, 'discount', Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-[#8faad8] rounded text-sm focus:ring-1 focus:ring-blue-500 bg-[#f4fbf4] font-mono text-right"
@@ -542,13 +636,35 @@ export function SalesInvoiceForm() {
 
                 <div className="w-80 bg-slate-100 border border-[#8faad8] rounded-lg p-3 space-y-2">
                   <div className="flex justify-between text-xs font-bold text-slate-700">
-                    <span>Taxable Subtotal:</span>
-                    <span className="font-mono text-slate-950">₹{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span>Gross Subtotal:</span>
+                    <span className="font-mono text-slate-950">₹{(totals.subtotal + totals.totalDiscount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+                  {totals.totalDiscount > 0 && (
+                    <>
+                      <div className="flex justify-between text-xs font-bold text-green-700">
+                        <span>Total Discount:</span>
+                        <span className="font-mono">-₹{totals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>Taxable Subtotal:</span>
+                        <span className="font-mono text-slate-950">₹{totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                    <span>Tax/GST:</span>
+                    <span className="font-mono text-slate-950">₹{totals.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {Math.abs(totals.roundedOff) > 0.001 && (
+                    <div className="flex justify-between text-xs font-bold text-slate-700">
+                      <span>Rounded Off:</span>
+                      <span className="font-mono text-slate-950">₹{totals.roundedOff.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                   <div className="pt-2 border-t border-blue-900 flex justify-between items-center bg-emerald-100/30 px-1 rounded">
                     <span className="font-bold text-emerald-950 text-sm">Grand Total (₹):</span>
                     <span className="text-base font-black text-emerald-900 font-mono">
-                      ₹{totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -576,6 +692,94 @@ export function SalesInvoiceForm() {
           </button>
         </div>
       </form>
+
+      {showDemandModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Select Pending Demand</h3>
+                <p className="text-sm text-gray-500">
+                  Item: {lines.find(l => l.id === currentLineId)?.item} | 
+                  Customer: {customers.find(c => String(c.Id || c.id) === String(customerId))?.CustomerName || 'N/A'}
+                </p>
+              </div>
+              <button onClick={() => setShowDemandModal(false)} className="text-gray-400 hover:text-gray-600">
+                <Trash2 className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <table className="w-full text-sm text-left border">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-2 border">Enquiry No.</th>
+                    <th className="p-2 border">Enquiry Date</th>
+                    <th className="p-2 border text-right">Total Quantity</th>
+                    <th className="p-2 border text-right">Already Supplied</th>
+                    <th className="p-2 border text-right">Pending Quantity</th>
+                    <th className="p-2 border text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {demandEnquiries
+                    .filter(d => {
+                      const line = lines.find(l => l.id === currentLineId);
+                      const cust = customers.find(c => String(c.Id || c.id) === String(customerId));
+                      const buyerName = cust ? (cust.CustomerName || cust.Customer_NAME || cust.Name || '') : '';
+                      return String(d.commodity).trim().toLowerCase() === String(line?.item).trim().toLowerCase() && 
+                             String(d.buyer).trim().toLowerCase() === String(buyerName).trim().toLowerCase() &&
+                             d.status !== 'Rejected';
+                    })
+                    .map(d => {
+                      const totalQty = parseFloat(d.totalQuantity || '0');
+                      const suppliedQty = getSuppliedDemandQty(d.enquiryNo);
+                      const pendingQty = Math.max(0, totalQty - suppliedQty);
+                      
+                      return (
+                        <tr key={d.Id || d.id} className="hover:bg-gray-50 border-b">
+                          <td className="p-2 border font-bold text-blue-700">{d.enquiryNo}</td>
+                          <td className="p-2 border">{d.expectedDate}</td>
+                          <td className="p-2 border text-right font-mono">{totalQty.toLocaleString('en-IN')}</td>
+                          <td className="p-2 border text-right font-mono text-green-600">{suppliedQty.toLocaleString('en-IN')}</td>
+                          <td className="p-2 border text-right font-mono text-orange-600 font-bold">{pendingQty.toLocaleString('en-IN')}</td>
+                          <td className="p-2 border text-center">
+                            <button 
+                              disabled={pendingQty <= 0}
+                              onClick={() => {
+                                if (currentLineId) {
+                                  setLines(lines.map(l => l.id === currentLineId ? { ...l, demandEnquiryNo: d.enquiryNo } : l));
+                                }
+                                setShowDemandModal(false);
+                              }}
+                              className={`px-3 py-1 rounded text-xs font-bold ${pendingQty <= 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            >
+                              Select
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {demandEnquiries.filter(d => {
+                      const line = lines.find(l => l.id === currentLineId);
+                      const cust = customers.find(c => String(c.Id || c.id) === String(customerId));
+                      const buyerName = cust ? (cust.CustomerName || cust.Customer_NAME || cust.Name || '') : '';
+                      return String(d.commodity).trim().toLowerCase() === String(line?.item).trim().toLowerCase() && 
+                             String(d.buyer).trim().toLowerCase() === String(buyerName).trim().toLowerCase() &&
+                             d.status !== 'Rejected';
+                  }).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-gray-500">No active demand enquiries found for this buyer and item.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex justify-end">
+              <button onClick={() => setShowDemandModal(false)} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-100">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

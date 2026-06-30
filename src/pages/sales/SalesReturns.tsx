@@ -137,7 +137,7 @@ export function SalesReturns() {
                     <td className="p-4 text-sm text-gray-600">{ret.OriginalInvoiceNumber || '-'}</td>
                     <td className="p-4 text-sm text-gray-900 font-medium">{getCustomerName(ret.CustomerId)}</td>
                     <td className="p-4 text-sm text-gray-600">{getCustomerPlace(ret.CustomerId)}</td>
-                    <td className="p-4 text-sm text-gray-900 font-mono text-right">{(ret.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-4 text-sm text-gray-900 font-mono text-right">{(ret.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="p-4 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => navigate(`/sales/returns/${ret.Id || ret.id}/print`)} className="text-gray-400 hover:text-green-600 transition-colors cursor-pointer" title="Print Return Receipt" id={`btn-print-${ret.Id || ret.id}`}>
                         <Printer className="w-4 h-4" />

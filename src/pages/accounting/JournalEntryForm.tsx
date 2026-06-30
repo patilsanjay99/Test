@@ -352,11 +352,11 @@ export function JournalEntryForm() {
             <span>II. Journal Lines</span>
             {diff !== 0 ? (
               <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded border border-red-300">
-                Difference: ₹{Math.abs(diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                Difference: ₹{Math.abs(diff).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             ) : totalDebit > 0 ? (
               <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-300">
-                Balanced (₹{totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })})
+                Balanced (₹{totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
               </span>
             ) : null}
           </div>
@@ -435,10 +435,10 @@ export function JournalEntryForm() {
                   <tr className="bg-slate-100 font-bold border-t-2 border-blue-900">
                     <td colSpan={2} className="p-2.5 text-right text-gray-800 text-xs border-r border-blue-900">Totals:</td>
                     <td className="p-2.5 text-right text-gray-950 font-mono text-sm border-r border-blue-900 font-bold">
-                      ₹{totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-2.5 text-right text-gray-950 font-mono text-sm border-r border-blue-900 font-bold">
-                      ₹{totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-2.5 text-center"></td>
                   </tr>

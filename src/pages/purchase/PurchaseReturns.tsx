@@ -181,7 +181,7 @@ export function PurchaseReturns() {
                       {getVendorPlace(ret.VendorId)}
                     </td>
                     <td className="p-4 text-sm text-gray-900 font-mono text-right font-bold">
-                      ₹{(ret.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{(ret.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 flex items-center justify-end gap-3 print:hidden opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       {ret.Status !== 'Processed' && (
@@ -325,9 +325,9 @@ export function PurchaseReturns() {
                               {item.reason && <span className="text-xs text-rose-600 font-medium block mt-0.5">Reason: {item.reason}</span>}
                             </td>
                             <td className="p-3 border-r border-slate-200 text-center font-mono">{item.qty}</td>
-                            <td className="p-3 border-r border-slate-200 text-right font-mono">₹{parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-3 border-r border-slate-200 text-right font-mono">₹{parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="p-3 text-right font-mono font-bold text-gray-900">
-                              ₹{(parseFloat(item.rate) * parseFloat(item.qty)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              ₹{(parseFloat(item.rate) * parseFloat(item.qty)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                           </tr>
                         ));
@@ -344,7 +344,7 @@ export function PurchaseReturns() {
                     <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-800">
                       <td colSpan={4} className="p-3 text-right text-sm">Grand Valuation:</td>
                       <td className="p-3 text-right font-mono text-base font-black text-rose-700">
-                        ₹{(selectedReturn.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{(selectedReturn.TotalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   </tfoot>
